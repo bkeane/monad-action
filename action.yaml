@@ -1,0 +1,30 @@
+name: Install Monad
+description: Install monad
+inputs:
+  version:
+    description: 'https://github.com/bkeane/monad/releases'
+    required: true
+    default: latest
+    
+runs:
+  using: composite
+  steps:
+    - name: Cache Monad
+      id: cached-monad
+      uses: actions/cache@v4
+      with:
+        path: /tmp/bin/
+        key: ${{ runner.os }}-${{ runner.arch }}-monad-${{ inputs.version }}
+    
+    - name: Install Monad
+      if: steps.cached-monad.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p /tmp/bin
+        docker create --name monad ghcr.io/bkeane/monad:${{ inputs.version }}
+        docker cp monad:/monad /tmp/bin/monad
+        docker rm monad
+    
+    - name: Append Monad to PATH
+      shell: bash
+      run: echo "/tmp/bin/" >> $GITHUB_PATH
