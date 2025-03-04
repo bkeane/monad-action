@@ -1,15 +1,48 @@
-name: Install Monad
+name: Setup Monad
 description: Install monad
 inputs:
   version:
     description: 'https://github.com/bkeane/monad/releases'
     required: true
     default: latest
-    
+  role_arn:
+    description: 'The ARN of the AWS role to use'
+    required: true
+  registry_id:
+    description: 'The ID of the ECR registry to use'
+    required: true
+  registry_region:
+    description: 'The region of the ECR registry to use'
+    required: true
+
 runs:
   using: composite
   steps:
-    - name: Cache Monad
+    - name: Assume Role
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ inputs.role_arn }}
+        role-session-name: monad-session
+
+    - name: Login to ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      with:
+        registry-ids: ${{ inputs.registry_id }}
+        region: ${{ inputs.registry_region }}
+    
+    - name: Configure Docker
+      uses: docker/setup-docker-action@v4
+      with:
+        daemon-config: |
+          {
+            "debug": true,
+            "features": {
+              "containerd-snapshotter": true
+            }
+          }
+
+    - name: Setup Monad Cache
       id: cached-monad
       uses: actions/cache@v4
       with:
@@ -28,3 +61,8 @@ runs:
     - name: Append Monad to PATH
       shell: bash
       run: echo "/tmp/bin/" >> $GITHUB_PATH
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
