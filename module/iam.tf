@@ -80,6 +80,15 @@ data "aws_iam_policy_document" "monad" {
   }
 
   statement {
+    sid    = "AllowEcrDescribeRegistry"
+    effect = "Allow"
+    actions = [
+      "ecr:DescribeRegistry"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
     sid    = "AllowEcrRepositoryAccess"
     effect = "Allow"
     actions = [
