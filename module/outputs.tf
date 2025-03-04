@@ -96,7 +96,9 @@ output "destroy" {
     name = "Destroy"
 
     on = {
-      delete = {}
+      pull_request_target = {
+        types = ["closed"]
+      }
     }
 
     jobs = {
