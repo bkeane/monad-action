@@ -23,6 +23,7 @@ runs:
       with:
         role-to-assume: ${{ inputs.role_arn }}
         role-session-name: monad-session
+        aws-region: ${{ inputs.registry_region }}
 
     - name: Login to ECR
       id: login-ecr
