@@ -1,4 +1,3 @@
-
 #
 # GitHub OIDC Provider
 #

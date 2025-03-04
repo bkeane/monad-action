@@ -7,7 +7,7 @@ variable "services" {
   type = map(object({
     compose_args = optional(string, "")
     deploy_args = optional(string, "")
-    destroy_args = optional(string, "")
+    destroy_args = optional(string, "--untag")
   }))
   description = "service definitions"
   default = {}

@@ -31,8 +31,6 @@ locals {
     for path, service in var.services :
       "${local.repo_owner}/${local.repo_name}/${basename(path)}"
   ])
-
-
 }
 
 data "aws_caller_identity" "current" {}
