@@ -32,7 +32,7 @@ runs:
         registry-ids: ${{ inputs.registry_id }}
         region: ${{ inputs.registry_region }}
     
-    - name: Configure Docker
+    - name: Configure Docker Containerd Registry
       uses: docker/setup-docker-action@v4
       with:
         daemon-config: |
@@ -42,6 +42,9 @@ runs:
               "containerd-snapshotter": true
             }
           }
+
+    - name: Configure Docker QEMU
+      uses: docker/setup-qemu-action@v3
 
     - name: Setup Monad Cache
       id: cached-monad
