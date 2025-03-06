@@ -49,7 +49,7 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-          "repo:${local.repo_owner}/${local.repo_name}:${local.allowed_branches}"
+        "repo:${local.repo_owner}/${local.repo_name}:${local.allowed_branches}"
       ]
     }
   }
@@ -70,43 +70,40 @@ resource "aws_iam_policy" "github" {
   policy      = data.aws_iam_policy_document.monad.json
 }
 
-
 data "aws_iam_policy_document" "monad" {
   statement {
-    sid       = "AllowEcrLogin"
-    effect    = "Allow"
-    resources = ["*"]
-    actions   = ["ecr:GetAuthorizationToken"]
-  }
-
-  statement {
-    sid    = "AllowEcrDescribeRegistry"
+    sid    = "AllowEcrRegistryRead"
     effect = "Allow"
     actions = [
-      "ecr:DescribeRegistry"
+      "ecr:List*",
+      "ecr:Describe*",
+      "ecr:GetAuthorizationToken"
     ]
     resources = ["*"]
   }
 
   statement {
-    sid    = "AllowEcrRepositoryAccess"
+    sid    = "AllowEcrRepositoryWrite"
     effect = "Allow"
     actions = [
       "ecr:*",
     ]
     resources = [
-      for image_path in local.images :
-        "arn:aws:ecr:${data.aws_region.current.name}:${var.ecr_hub_account_id}:repository/${image_path}"
+      "arn:aws:ecr:${data.aws_region.current.name}:${var.ecr_hub_account_id}:repository/${local.repository_wildcard}"
     ]
   }
 
   statement {
-    sid    = "AllowIAMAccess"
+    sid    = "AllowIAMAccessWrite"
     effect = "Allow"
     actions = [
       "iam:*"
     ]
-    resources = ["*"]
+    resources = [
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${local.resource_wildcard}",
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_wildcard}",
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSLambdaVPCAccessExecutionRole"
+    ]
     # condition {
     #   test     = "StringEquals"
     #   variable = "iam:PermissionsBoundary"
@@ -115,43 +112,70 @@ data "aws_iam_policy_document" "monad" {
   }
 
   statement {
-    sid    = "AllowLambdaAccess"
+    sid    = "AllowLambdaWrite"
     effect = "Allow"
     actions = [
       "lambda:*"
     ]
+    resources = [
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.resource_wildcard}",
+    ]
+  }
+
+  statement {
+    sid    = "AllowApiGatewayRead"
+    effect = "Allow"
+    actions = [
+      "apigateway:GET"
+    ]
     resources = ["*"]
   }
 
   statement {
-    sid    = "AllowApiGatewayV2Access"
+    sid    = "AllowApiGatewayV2Write"
     effect = "Allow"
     actions = [
       "apigateway:*"
     ]
-    resources = [
-      "arn:aws:apigateway:${data.aws_region.current.name}::/apis",
-      "arn:aws:apigateway:${data.aws_region.current.name}::/apis/*",
-      "arn:aws:apigateway:${data.aws_region.current.name}::/tags/*"
-    ]
+    resources = flatten([
+      for apigatewayv2_id in var.apigatewayv2_ids : [
+        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${apigatewayv2_id}",
+        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${apigatewayv2_id}/*",
+        "arn:aws:apigateway:${data.aws_region.current.name}::/tags/${apigatewayv2_id}",
+      ]
+    ])
   }
 
   statement {
-    sid    = "AllowCloudWatchAccess"
+    sid    = "AllowCloudWatchWrite"
     effect = "Allow"
     actions = [
       "logs:*"
     ]
+    resources = [
+      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${local.path_wildcard}:*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowEventBridgeRead"
+    effect = "Allow"
+    actions = [
+      "events:List*",
+      "events:Describe*",
+    ]
     resources = ["*"]
   }
 
   statement {
-    sid = "AllowEventBridgeAccess"
+    sid    = "AllowEventBridgeWrite"
     effect = "Allow"
     actions = [
       "events:*"
     ]
-    resources = ["*"]
+    resources = [
+      "arn:aws:events:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:rule/${local.resource_wildcard}"
+    ]
   }
 }
 

@@ -36,6 +36,13 @@ locals {
       run  = trimspace("monad --chdir ${path} destroy ${service.destroy_args}")
     }
   ]
+
+  untag = [
+    for path, service in var.services : {
+      name = "Untag ${basename(path)}"
+      run  = trimspace("monad --chdir ${path} ecr untag")
+    }
+  ]
 }
 
 output "deploy" {
@@ -44,6 +51,11 @@ output "deploy" {
 
     on = {
       pull_request = {}
+      push = {
+        branches = [
+          "main"
+        ]
+      }
     }
 
     jobs = {
@@ -118,13 +130,13 @@ output "destroy" {
             uses = "bkeane/monad-action@main"
             with = {
               version         = "latest"
-              role_arn        = local.ecr_hub_account_role_arn
+              role_arn        = "$${{ matrix.role_arn }}"
               registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
               registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
             }
           }
-        ], local.destroy)
-      })
+        ], local.destroy, local.untag)
+      }),
     }
   }))
 }

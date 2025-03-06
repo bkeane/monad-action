@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "services" {
-    for_each = local.is_hub ? toset(local.images) : toset([])
+    for_each = local.is_hub ? toset(local.image_paths) : toset([])
     name = each.value
     image_tag_mutability = var.mutable ? "MUTABLE" : "IMMUTABLE"
 }
@@ -37,7 +37,7 @@ resource "aws_ecr_repository_policy" "cross_account_access" {
                 Condition = {
                     StringLike = {
                         "aws:sourceARN": concat([
-                            for account_id in var.ecr_spoke_account_ids: 
+                            for account_id in var.ecr_spoke_account_ids:
                                 "arn:aws:lambda:${data.aws_region.current.name}:${account_id}:function:*"
                         ])
                     }

@@ -7,7 +7,7 @@ variable "services" {
   type = map(object({
     compose_args = optional(string, "")
     deploy_args = optional(string, "")
-    destroy_args = optional(string, "--untag")
+    destroy_args = optional(string, "")
   }))
   description = "service definitions"
   default = {}
@@ -33,6 +33,11 @@ variable "ecr_hub_account_region" {
 variable "ecr_spoke_account_ids" {
   type = set(string)
   description = "The ECR spoke account IDs"
+}
+
+variable "apigatewayv2_ids" {
+  type = set(string)
+  description = "The API Gateway V2 IDs used by the services"
 }
 
 variable "create_oidc_provider" {

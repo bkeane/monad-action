@@ -27,7 +27,11 @@ locals {
   prefix           = "${local.repo_owner}-${local.repo_name}"
   allowed_branches = "*"
 
-  images = toset([
+  repository_wildcard = "${local.repo_owner}/${local.repo_name}/*"
+  resource_wildcard = "${local.repo_name}-*-*"
+  path_wildcard = "${local.repo_name}/*/*"
+
+  image_paths = toset([
     for path, service in var.services :
       "${local.repo_owner}/${local.repo_name}/${basename(path)}"
   ])
