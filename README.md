@@ -45,9 +45,13 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 ```
 
+### Action
+
+The github action defined in `action.yaml` configures a like-for-like context as you experience with `monad` on the cli within a given repository. It is used extensively in the templated workflow yaml file contents provided by the `hub` module.
+
 ### Hub
 
-The `hub` module creates the necessary resources for github actions image publishing and templates out `./.github/workflows/deploy.yaml` and `./.github/workflows/destroy.yaml`. 
+The `hub` module creates the necessary resources for github actions to publish ECR images. It also templates the workflow files for cross-account deployment to `spoke`s.
 
 See [module docs](./modules/hub) for more details.
 
