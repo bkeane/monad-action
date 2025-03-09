@@ -59,4 +59,4 @@ See [module docs](./modules/spoke) for more details.
 
 ## Example
 
-See the `./e2e/terraform` directory in the [monad repository](https://github.com/bkeane/monad).
+See the `./e2e/terraform` directory in the [monad repository](https://github.com/bkeane/monad/tree/main/e2e/terraform).
