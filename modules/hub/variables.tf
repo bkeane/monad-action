@@ -26,7 +26,7 @@ variable "spoke_account_ids" {
 }
 
 variable "boundary_policy" {
-  description = "Apply the boundary policy to created roles"
+  description = "Whether to apply the boundary policy to created roles"
   type = bool
   default = true
 }

@@ -7,15 +7,6 @@ data "aws_iam_openid_connect_provider" "github" {
 }
 
 #
-# Boundary Policy
-#
-
-data "aws_iam_policy" "boundary" {
-  count = var.boundary_policy ? 1 : 0
-  name = local.boundary_policy_name
-}
-
-#
 # GitHub Actions Role
 #
 

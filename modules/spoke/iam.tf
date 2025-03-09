@@ -15,7 +15,7 @@ data "aws_iam_openid_connect_provider" "github" {
 #
 
 resource "aws_iam_policy" "boundary" {
-  count = var.boundary_policy != null ? 1 : 0
+  count       = var.boundary_policy != null ? 1 : 0
   name        = local.boundary_policy_name
   description = "permission boundary for roles created by ${var.origin} github actions"
   policy      = var.boundary_policy.json
@@ -75,14 +75,30 @@ resource "aws_iam_policy" "spoke" {
 
 data "aws_iam_policy_document" "spoke" {
   statement {
-    sid    = "AllowEcrRegistryRead"
+    sid    = "AllowEcrRegistryLogin"
     effect = "Allow"
     actions = [
-      "ecr:List*",
-      "ecr:Describe*",
-      "ecr:GetAuthorizationToken"
+      "ecr:GetAuthorizationToken",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:DescribeRepositories",
+      "ecr:ListImages"
     ]
     resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowEcrLambda"
+    effect = "Allow"
+    actions = [
+      "ecr:SetRepositoryPolicy",
+      "ecr:GetRepositoryPolicy",
+    ]
+
+    resources = [
+      "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/${local.image_wildcard}"
+    ]
   }
 
   statement {
@@ -115,33 +131,40 @@ data "aws_iam_policy_document" "spoke" {
   }
 
   statement {
-    sid    = "AllowIAMWrite"
+    sid    = "AllowEniRoleWrite"
     effect = "Allow"
     actions = [
-      "iam:Create*",
-      "iam:Get*",
-      "iam:Update*",
-      "iam:Delete*",
-      "iam:Attach*",
-      "iam:Pass*"
+      "iam:*"
     ]
+    resources = [
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSLambdaVPCAccessExecutionRole",
+      "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+    ]
+  }
 
+  statement {
+    sid    = "AllowIamWrite"
+    effect = "Allow"
+    actions = [
+      "iam:*"
+    ]
     resources = [
       "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${local.resource_wildcard}",
       "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_wildcard}",
-      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSLambdaVPCAccessExecutionRole",
-      "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-      local.boundary_policy_arn
     ]
+  }
 
-    dynamic "condition" {
-      for_each = var.boundary_policy != null ? [1] : []
-      content {
-        test     = "StringEquals"
+  dynamic "statement" {
+    for_each = var.boundary_policy != null ? [1] : []
+    content {
+      sid       = "DenyRoleCreateWithoutBoundary"
+      effect    = "Deny"
+      actions   = ["iam:CreateRole"]
+      resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_wildcard}"]
+      condition {
+        test     = "StringNotEquals"
         variable = "iam:PermissionsBoundary"
-        values   = [
-          local.boundary_policy_arn
-        ]
+        values   = [local.boundary_policy_arn]
       }
     }
   }

@@ -70,6 +70,7 @@ output "deploy" {
               role_arn        = local.oidc_hub_role_arn
               registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
               registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
+              configure_for_build = true
             }
           }
         ], local.publish)
