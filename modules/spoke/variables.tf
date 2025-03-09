@@ -8,7 +8,7 @@ variable "api_gateway_ids" {
   type = set(string)
 }
 
-variable "boundary_policy" {
+variable "boundary_policy_document" {
   description = "The boundary policy for created roles (data.aws_iam_policy_document)"
   type = object({
     json = string

@@ -15,10 +15,8 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_apigatewayv2_ids"></a> [apigatewayv2\_ids](#input\_apigatewayv2\_ids) | The API Gateway V2 IDs used by the services | `set(string)` | n/a | yes |
-| <a name="input_boundary_policy"></a> [boundary\_policy](#input\_boundary\_policy) | The boundary policy ARN (data "aws\_iam\_policy\_document") | <pre>object({<br/>    json = string<br/>    minified_json = string<br/>  })</pre> | `null` | no |
-| <a name="input_hub_account_id"></a> [hub\_account\_id](#input\_hub\_account\_id) | The ECR hub account ID | `string` | n/a | yes |
-| <a name="input_mutable"></a> [mutable](#input\_mutable) | whether ECR repository image tags are mutable | `bool` | `true` | no |
+| <a name="input_api_gateway_ids"></a> [api\_gateway\_ids](#input\_api\_gateway\_ids) | The API Gateway V2 IDs used by the services | `set(string)` | n/a | yes |
+| <a name="input_boundary_policy_document"></a> [boundary\_policy\_document](#input\_boundary\_policy\_document) | The boundary policy for created roles (data.aws\_iam\_policy\_document) | <pre>object({<br/>    json = string<br/>    minified_json = string<br/>  })</pre> | `null` | no |
 | <a name="input_origin"></a> [origin](#input\_origin) | https origin of the github repo | `string` | n/a | yes |
 
 ## Outputs

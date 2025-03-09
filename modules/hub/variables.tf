@@ -6,10 +6,10 @@ variable "origin" {
 variable "services" {
   description = "service definitions"
   type = map(object({
-    build_args = optional(string, "")
-    compose_args = optional(string, "")
-    deploy_args = optional(string, "")
-    destroy_args = optional(string, "")
+    docker_compose_args = optional(string, "--push")
+    monad_compose_args = optional(string, "")
+    monad_deploy_args = optional(string, "")
+    monad_destroy_args = optional(string, "")
   }))
   default = {}
 }
@@ -25,8 +25,32 @@ variable "spoke_account_ids" {
   type = set(string)
 }
 
-variable "boundary_policy" {
-  description = "Whether to apply the boundary policy to created roles"
-  type = bool
-  default = true
+variable "boundary_policy_document" {
+  description = "The boundary policy for created roles (data.aws_iam_policy_document)"
+  type = object({
+    json = string
+    minified_json = string
+  })
+  default = null
+}
+
+variable "deploy_on" {
+  description = "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#on"
+  type = any
+  default = {
+    pull_request = {}
+    push = {
+      branches = ["main"]
+    }
+  }
+}
+
+variable "destroy_on" {
+  description = "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#on"
+  type = any
+  default = {
+    pull_request_target = {
+      types = ["closed"]
+    }
+  }
 }

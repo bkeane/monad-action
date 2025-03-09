@@ -5,7 +5,7 @@ locals {
       MONAD_REGISTRY_REGION = data.aws_region.current.name
       MONAD_BRANCH          = "$${{ github.head_ref || github.ref_name }}"
       MONAD_SHA             = "$${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-    }, var.boundary_policy ? { MONAD_BOUNDARY_POLICY = local.boundary_policy_name } : {})
+    }, var.boundary_policy_document != null ? { MONAD_BOUNDARY_POLICY = local.boundary_policy_name } : {})
   }
 
   job_common = {
@@ -19,21 +19,21 @@ locals {
   publish = [
     for path, service in var.services : {
       name = "Publish ${basename(path)}"
-      run  = "${trimspace("monad --chdir ${path} compose ${service.compose_args}")} | docker compose -f - build --push"
+      run  = "${trimspace("monad --chdir ${path} compose ${service.monad_compose_args}")} | docker compose -f - build ${service.docker_compose_args}"
     }
   ]
 
   deploy = [
     for path, service in var.services : {
       name = "Deploy ${basename(path)}"
-      run  = trimspace("monad --chdir ${path} deploy ${service.deploy_args}")
+      run  = trimspace("monad --chdir ${path} deploy ${service.monad_deploy_args}")
     }
   ]
 
   destroy = [
     for path, service in var.services : {
       name = "Destroy ${basename(path)}"
-      run  = trimspace("monad --chdir ${path} destroy ${service.destroy_args}")
+      run  = trimspace("monad --chdir ${path} destroy ${service.monad_destroy_args}")
     }
   ]
 
@@ -49,14 +49,7 @@ output "deploy" {
   value = yamlencode(merge(local.workflow_common, {
     name = "Deploy"
 
-    on = {
-      pull_request = {}
-      push = {
-        branches = [
-          "main"
-        ]
-      }
-    }
+    on = var.deploy_on
 
     jobs = {
       publish = merge(local.job_common, {
@@ -105,11 +98,7 @@ output "destroy" {
   value = yamlencode(merge(local.workflow_common, {
     name = "Destroy"
 
-    on = {
-      pull_request_target = {
-        types = ["closed"]
-      }
-    }
+    on = var.destroy_on
 
     jobs = {
       destroy = merge(local.job_common, {

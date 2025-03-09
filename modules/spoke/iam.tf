@@ -15,10 +15,10 @@ data "aws_iam_openid_connect_provider" "github" {
 #
 
 resource "aws_iam_policy" "boundary" {
-  count       = var.boundary_policy != null ? 1 : 0
+  count       = var.boundary_policy_document != null ? 1 : 0
   name        = local.boundary_policy_name
   description = "permission boundary for roles created by ${var.origin} github actions"
-  policy      = var.boundary_policy.json
+  policy      = var.boundary_policy_document.json
 }
 
 
@@ -116,7 +116,7 @@ data "aws_iam_policy_document" "spoke" {
 
   dynamic "statement" {
     // Premature optimization around potential stupidity, but \o/
-    for_each = var.boundary_policy != null ? [1] : []
+    for_each = var.boundary_policy_document != null ? [1] : []
     content {
       sid    = "DenyBoundaryPolicyDeletion"
       effect = "Deny"
@@ -155,7 +155,7 @@ data "aws_iam_policy_document" "spoke" {
   }
 
   dynamic "statement" {
-    for_each = var.boundary_policy != null ? [1] : []
+    for_each = var.boundary_policy_document != null ? [1] : []
     content {
       sid       = "DenyRoleCreateWithoutBoundary"
       effect    = "Deny"
