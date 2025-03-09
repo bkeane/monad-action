@@ -1,30 +1,33 @@
+locals {
+  boundary_policy_arn = length(aws_iam_policy.boundary) > 0 ? aws_iam_policy.boundary[0].arn : null
+}
+
 #
 # GitHub OIDC Provider
 #
 
-resource "aws_iam_openid_connect_provider" "github" {
-  count          = var.create_oidc_provider ? 1 : 0
-  url            = "https://token.actions.githubusercontent.com"
-  client_id_list = ["sts.amazonaws.com"]
-  # Hex-encoded SHA-1 hash of the X.509 domain certificate
-  # https://github.blog/changelog/2023-06-27-github-actions-update-on-oidc-integration-with-aws/
-  thumbprint_list = [
-    "6938fd4d98bab03faadb97b34396831e3780aea1",
-    "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
-  ]
+data "aws_iam_openid_connect_provider" "github" {
+  arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
-data "aws_iam_openid_connect_provider" "github" {
-  count = var.create_oidc_provider ? 0 : 1
-  arn   = "arn:aws:iam::${var.ecr_hub_account_id}:oidc-provider/token.actions.githubusercontent.com"
+#
+# Boundary Policy
+#
+
+resource "aws_iam_policy" "boundary" {
+  count = var.boundary_policy != null ? 1 : 0
+  name        = local.boundary_policy_name
+  description = "permission boundary for roles created by ${var.origin} github actions"
+  policy      = var.boundary_policy.json
 }
+
 
 #
 # GitHub Actions Role
 #
 
-resource "aws_iam_role" "github" {
-  name                  = "${local.prefix}-oidc-role"
+resource "aws_iam_role" "spoke" {
+  name                  = local.oidc_spoke_role_name
   description           = "used by ${var.origin} github actions"
   assume_role_policy    = data.aws_iam_policy_document.trust.json
   force_detach_policies = true
@@ -34,7 +37,7 @@ data "aws_iam_policy_document" "trust" {
   statement {
     principals {
       type        = "Federated"
-      identifiers = var.create_oidc_provider ? [aws_iam_openid_connect_provider.github[0].arn] : [data.aws_iam_openid_connect_provider.github[0].arn]
+      identifiers = [data.aws_iam_openid_connect_provider.github.arn]
     }
 
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -49,28 +52,28 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${local.repo_owner}/${local.repo_name}:${local.allowed_branches}"
+        local.oidc_subject_claim
       ]
     }
   }
 }
 
-resource "aws_iam_role_policy_attachment" "github" {
-  role       = aws_iam_role.github.name
-  policy_arn = aws_iam_policy.github.arn
+resource "aws_iam_role_policy_attachment" "spoke" {
+  role       = aws_iam_role.spoke.name
+  policy_arn = aws_iam_policy.spoke.arn
 }
 
 #
 # GitHub Actions Policy
 #
 
-resource "aws_iam_policy" "github" {
-  name        = "${local.prefix}-oidc-policy"
+resource "aws_iam_policy" "spoke" {
+  name        = "${local.oidc_spoke_role_name}-policy"
   description = "used by ${var.origin} github actions"
-  policy      = data.aws_iam_policy_document.monad.json
+  policy      = data.aws_iam_policy_document.spoke.json
 }
 
-data "aws_iam_policy_document" "monad" {
+data "aws_iam_policy_document" "spoke" {
   statement {
     sid    = "AllowEcrRegistryRead"
     effect = "Allow"
@@ -83,32 +86,64 @@ data "aws_iam_policy_document" "monad" {
   }
 
   statement {
-    sid    = "AllowEcrRepositoryWrite"
-    effect = "Allow"
+    // DENY the OIDC role the ability to assume the roles it creates.
+    sid    = "DenyOIDCChaining"
+    effect = "Deny"
     actions = [
-      "ecr:*",
+      "sts:AssumeRole",
     ]
+
     resources = [
-      "arn:aws:ecr:${data.aws_region.current.name}:${var.ecr_hub_account_id}:repository/${local.repository_wildcard}"
+      "*"
     ]
   }
 
+  dynamic "statement" {
+    // Premature optimization around potential stupidity, but \o/
+    for_each = var.boundary_policy != null ? [1] : []
+    content {
+      sid    = "DenyBoundaryPolicyDeletion"
+      effect = "Deny"
+      actions = [
+        "iam:DeletePolicy",
+        "iam:DeletePolicyVersion"
+      ]
+      resources = [
+        local.boundary_policy_arn
+      ]
+    }
+  }
+
   statement {
-    sid    = "AllowIAMAccessWrite"
+    sid    = "AllowIAMWrite"
     effect = "Allow"
     actions = [
-      "iam:*"
+      "iam:Create*",
+      "iam:Get*",
+      "iam:Update*",
+      "iam:Delete*",
+      "iam:Attach*",
+      "iam:Pass*"
     ]
+
     resources = [
       "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${local.resource_wildcard}",
       "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_wildcard}",
-      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSLambdaVPCAccessExecutionRole"
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSLambdaVPCAccessExecutionRole",
+      "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+      local.boundary_policy_arn
     ]
-    # condition {
-    #   test     = "StringEquals"
-    #   variable = "iam:PermissionsBoundary"
-    #   values   = [aws_iam_policy.github_boundary.arn]
-    # }
+
+    dynamic "condition" {
+      for_each = var.boundary_policy != null ? [1] : []
+      content {
+        test     = "StringEquals"
+        variable = "iam:PermissionsBoundary"
+        values   = [
+          local.boundary_policy_arn
+        ]
+      }
+    }
   }
 
   statement {
@@ -123,7 +158,7 @@ data "aws_iam_policy_document" "monad" {
   }
 
   statement {
-    sid    = "AllowApiGatewayRead"
+    sid    = "AllowApiGatewayV2Read"
     effect = "Allow"
     actions = [
       "apigateway:GET"
@@ -138,10 +173,10 @@ data "aws_iam_policy_document" "monad" {
       "apigateway:*"
     ]
     resources = flatten([
-      for apigatewayv2_id in var.apigatewayv2_ids : [
-        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${apigatewayv2_id}",
-        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${apigatewayv2_id}/*",
-        "arn:aws:apigateway:${data.aws_region.current.name}::/tags/${apigatewayv2_id}",
+      for id in var.api_gateway_ids : [
+        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${id}",
+        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${id}/*",
+        "arn:aws:apigateway:${data.aws_region.current.name}::/tags/${id}",
       ]
     ])
   }
@@ -178,14 +213,3 @@ data "aws_iam_policy_document" "monad" {
     ]
   }
 }
-
-#
-# GitHub Actions Boundary Policy
-#
-
-# resource "aws_iam_policy" "github_boundary" {
-#   name        = "${var.prefix}-oidc-boundary-policy"
-#   description = "used by monad in github actions"
-#   policy      = data.aws_iam_policy_document.github_boundary.json
-# }
-

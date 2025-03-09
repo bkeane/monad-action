@@ -1,11 +1,11 @@
 locals {
   workflow_common = {
-    env = {
-      MONAD_REGISTRY_ID     = local.ecr_hub_account_id
-      MONAD_REGISTRY_REGION = local.ecr_hub_account_region
+    env = merge({
+      MONAD_REGISTRY_ID     = data.aws_caller_identity.current.account_id
+      MONAD_REGISTRY_REGION = data.aws_region.current.name
       MONAD_BRANCH          = "$${{ github.head_ref || github.ref_name }}"
       MONAD_SHA             = "$${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-    }
+    }, var.boundary_policy ? { MONAD_BOUNDARY_POLICY = local.boundary_policy_name } : {})
   }
 
   job_common = {
@@ -67,7 +67,7 @@ output "deploy" {
             uses = "bkeane/monad-action@main"
             with = {
               version         = "latest"
-              role_arn        = local.ecr_hub_account_role_arn
+              role_arn        = local.oidc_hub_role_arn
               registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
               registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
             }
@@ -79,10 +79,7 @@ output "deploy" {
         needs = "publish"
         strategy = {
           matrix = {
-            role_arn = compact(flatten([
-              local.ecr_hub_account_role_arn,
-              local.ecr_spoke_account_role_arns
-            ]))
+            role_arn = local.oidc_spoke_role_arns
           }
         }
         steps = concat([
@@ -117,10 +114,7 @@ output "destroy" {
       destroy = merge(local.job_common, {
         strategy = {
           matrix = {
-            role_arn = compact(flatten([
-              local.ecr_hub_account_role_arn,
-              local.ecr_spoke_account_role_arns
-            ]))
+            role_arn = local.oidc_spoke_role_arns
           }
         }
         steps = concat([
@@ -135,8 +129,24 @@ output "destroy" {
               registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
             }
           }
-        ], local.destroy, local.untag)
+        ], local.destroy)
       }),
     }
+
+    untag = merge(local.job_common, {
+        steps = concat([
+          {
+            name = "Setup Monad"
+            id   = "setup-monad"
+            uses = "bkeane/monad-action@main"
+            with = {
+              version         = "latest"
+              role_arn        = local.oidc_hub_role_arn
+              registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
+              registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
+            }
+          }
+        ], local.untag)
+      }), 
   }))
 }

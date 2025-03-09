@@ -14,6 +14,10 @@ inputs:
   registry_region:
     description: 'The region of the ECR registry to use'
     required: true
+  configure_for_build:
+    description: 'Configure docker for build'
+    required: false
+    default: false
 
 runs:
   using: composite
@@ -32,7 +36,8 @@ runs:
         registry-ids: ${{ inputs.registry_id }}
         region: ${{ inputs.registry_region }}
     
-    - name: Configure Docker Containerd Registry
+    - if: ${{ inputs.configure_for_build == 'true' }}
+      name: Configure Docker Containerd Registry
       uses: docker/setup-docker-action@v4
       with:
         daemon-config: |
@@ -43,7 +48,8 @@ runs:
             }
           }
 
-    - name: Configure Docker QEMU
+    - if: ${{ inputs.configure_for_build == 'true' }}
+      name: Configure Docker QEMU
       uses: docker/setup-qemu-action@v3
 
     - name: Setup Monad Cache

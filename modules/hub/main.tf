@@ -8,25 +8,23 @@ terraform {
 }
 
 locals {
-  is_hub = var.ecr_hub_account_id == data.aws_caller_identity.current.account_id
-
-  ecr_hub_account_id = var.ecr_hub_account_id != null ? var.ecr_hub_account_id : data.aws_caller_identity.current.account_id
-  ecr_hub_account_region = var.ecr_hub_account_region != null ? var.ecr_hub_account_region : data.aws_region.current.name
-  ecr_hub_account_role_arn = "arn:aws:iam::${local.ecr_hub_account_id}:role/${local.prefix}-oidc-role"
-  
-  ecr_spoke_account_role_arns = [
-    for account_id in var.ecr_spoke_account_ids :
-    "arn:aws:iam::${account_id}:role/${local.prefix}-oidc-role"
-  ]
-
+  # Git
   repo_path  = replace(data.corefunc_url_parse.origin.path, ".git", "")
   repo_parts = compact(split("/", local.repo_path))
   repo_owner = local.repo_parts[0]
   repo_name  = local.repo_parts[1]
 
-  prefix           = "${local.repo_owner}-${local.repo_name}"
-  allowed_branches = "*"
+  # OIDC
+  oidc_hub_role_name = "${local.repo_name}-hub-oidc-role"
+  oidc_hub_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.oidc_hub_role_name}"
 
+  oidc_spoke_role_name = "${local.repo_name}-spoke-oidc-role"
+  oidc_spoke_role_arns = [ for id in var.spoke_account_ids : "arn:aws:iam::${id}:role/${local.oidc_spoke_role_name}" ]
+  
+  oidc_subject_claim = "repo:${local.repo_owner}/${local.repo_name}:*" # wildcard for all branches
+  
+  # Resources
+  boundary_policy_name = "${local.repo_name}-boundary-policy"
   repository_wildcard = "${local.repo_owner}/${local.repo_name}/*"
   resource_wildcard = "${local.repo_name}-*-*"
   path_wildcard = "${local.repo_name}/*/*"

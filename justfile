@@ -4,4 +4,5 @@ default:
 
 # generate terraform docs
 gen:
-    terraform-docs markdown module > module/README.md
+    terraform-docs markdown modules/hub > modules/hub/README.md
+    terraform-docs markdown modules/spoke > modules/spoke/README.md
