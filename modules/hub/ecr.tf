@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "services" {
-    for_each = local.image_paths
+    for_each = local.images
     name = each.value
     image_tag_mutability = var.mutable ? "MUTABLE" : "IMMUTABLE"
 }

@@ -29,10 +29,10 @@ locals {
   resource_wildcard = "${local.repo_name}-*"
   path_wildcard = "${local.repo_name}/*/*"
 
-  image_paths = toset([
-    for path, service in var.services :
-      "${local.repo_owner}/${local.repo_name}/${basename(path)}"
-  ])
+  images = toset(distinct([
+    for service in var.services :
+      service.MONAD_IMAGE
+  ]))
 }
 
 data "aws_caller_identity" "current" {}

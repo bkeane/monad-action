@@ -21,6 +21,22 @@ resource "aws_iam_policy" "boundary" {
   policy      = var.boundary_policy_document.json
 }
 
+#
+# Secondary Policy
+#
+
+resource "aws_iam_policy" "extended" {
+  count       = var.extended_policy_document != null ? 1 : 0
+  name        = local.extension_policy_name
+  description = "additional policy for ${var.origin} github actions"
+  policy      = var.extended_policy_document.json
+}
+
+resource "aws_iam_role_policy_attachment" "extended" {
+  count      = var.extended_policy_document != null ? 1 : 0
+  role       = aws_iam_role.spoke.name
+  policy_arn = aws_iam_policy.extended[0].arn
+}
 
 #
 # GitHub Actions Role

@@ -3,17 +3,6 @@ variable "origin" {
   type = string
 }
 
-variable "services" {
-  description = "service definitions"
-  type = map(object({
-    docker_compose_args = optional(string, "--push")
-    monad_compose_args = optional(string, "")
-    monad_deploy_args = optional(string, "")
-    monad_destroy_args = optional(string, "")
-  }))
-  default = {}
-}
-
 variable "mutable" {
   description = "whether ECR repository image tags are mutable"
   type = bool
@@ -32,6 +21,32 @@ variable "boundary_policy_document" {
     minified_json = string
   })
   default = null
+}
+
+variable "services" {
+  description = "monad service definitions"
+  type = set(map(string))
+  default = []
+
+  validation {
+    condition = alltrue([
+      for service in var.services :
+        alltrue([
+          contains(keys(service), "MONAD_CHDIR"),
+          contains(keys(service), "MONAD_SERVICE"), 
+          contains(keys(service), "MONAD_IMAGE")
+        ])
+    ])
+    error_message = "All service definitions must contain:\n\tMONAD_CHDIR\n\tMONAD_SERVICE\n\tMONAD_IMAGE"
+  }
+
+  validation {
+    condition = length(distinct([
+      for service in var.services :
+        service.MONAD_SERVICE
+    ])) == length(var.services)
+    error_message = "Each service definition must have a unique MONAD_SERVICE value"
+  }
 }
 
 variable "deploy_on" {

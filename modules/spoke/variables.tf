@@ -16,3 +16,12 @@ variable "boundary_policy_document" {
   })
   default = null
 }
+
+variable "extended_policy_document" {
+  description = "Additional policy document for github actions OIDC role (data.aws_iam_policy_document)"
+  type = object({
+    json = string
+    minified_json = string
+  })
+  default = null
+}
