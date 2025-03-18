@@ -19,7 +19,7 @@ locals {
   oidc_hub_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.oidc_hub_role_name}"
 
   oidc_spoke_role_name = "${local.repo_name}-spoke-oidc-role"
-  oidc_spoke_role_arns = [ for id in var.spoke_account_ids : "arn:aws:iam::${id}:role/${local.oidc_spoke_role_name}" ]
+  # oidc_spoke_role_arns =  [ for id in var.spoke_account_ids : "arn:aws:iam::${id}:role/${local.oidc_spoke_role_name}" ]
   
   oidc_subject_claim = "repo:${local.repo_owner}/${local.repo_name}:*" # wildcard for all branches
   
@@ -28,11 +28,6 @@ locals {
   repository_wildcard = "${local.repo_owner}/${local.repo_name}/*"
   resource_wildcard = "${local.repo_name}-*"
   path_wildcard = "${local.repo_name}/*/*"
-
-  images = toset(distinct([
-    for service in var.services :
-      service.MONAD_IMAGE
-  ]))
 }
 
 data "aws_caller_identity" "current" {}

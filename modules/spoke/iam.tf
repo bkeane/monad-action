@@ -27,7 +27,7 @@ resource "aws_iam_policy" "boundary" {
 
 resource "aws_iam_policy" "extended" {
   count       = var.extended_policy_document != null ? 1 : 0
-  name        = local.extension_policy_name
+  name        = "${local.oidc_spoke_role_name}-policy-extended"
   description = "additional policy for ${var.origin} github actions"
   policy      = var.extended_policy_document.json
 }
@@ -94,6 +94,7 @@ data "aws_iam_policy_document" "spoke" {
     sid    = "AllowEcrRegistryLogin"
     effect = "Allow"
     actions = [
+      "ecr:DescribeRegistry",
       "ecr:GetAuthorizationToken",
       "ecr:GetDownloadUrlForLayer",
       "ecr:BatchGetImage",
@@ -250,5 +251,16 @@ data "aws_iam_policy_document" "spoke" {
     resources = [
       "arn:aws:events:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:rule/${local.resource_wildcard}"
     ]
+  }
+
+  statement {
+    sid = "AllowVPCRead"
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeVpcs"
+    ]
+    resources = ["*"]
   }
 }

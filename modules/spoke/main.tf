@@ -20,7 +20,7 @@ locals {
   
   # Resources
   boundary_policy_name = "${local.repo_name}-boundary-policy"
-  extension_policy_name = "${local.repo_name}-extended-policy"
+  extension_policy_name = "${local.repo_name}-spoke-extended-policy"
   repository_wildcard = "${local.repo_owner}/${local.repo_name}/*"
   resource_wildcard = "${local.repo_name}-*"
   path_wildcard = "${local.repo_name}/*/*"

@@ -33,7 +33,7 @@ runs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
       with:
-        registry-ids: ${{ inputs.registry_id }}
+        registries: ${{ inputs.registry_id }}
         region: ${{ inputs.registry_region }}
     
     - if: ${{ inputs.configure_for_build == 'true' }}
@@ -52,6 +52,17 @@ runs:
       name: Configure Docker QEMU
       uses: docker/setup-qemu-action@v3
 
+    # - if: ${{ inputs.configure_for_build == 'true' }}
+    #   name: Export actions cache url details
+    #   uses: actions/github-script@v7
+    #   env:
+    #     github-token: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     script: |
+    #       core.exportVariable('ACTIONS_CACHE_URL', process.env['ACTIONS_CACHE_URL'])
+    #       core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env['ACTIONS_RUNTIME_TOKEN'])
+    #       core.exportVariable('ACTIONS_RUNTIME_URL', process.env['ACTIONS_RUNTIME_URL'])
+    
     - name: Setup Monad Cache
       id: cached-monad
       uses: actions/cache@v4

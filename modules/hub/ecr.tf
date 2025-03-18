@@ -1,3 +1,8 @@
+locals {
+    images = toset([ for release in var.services.releases : release["MONAD_IMAGE"] ])
+    account_ids = toset([ for account in var.spoke_accounts : account.id ])
+}
+
 resource "aws_ecr_repository" "services" {
     for_each = local.images
     name = each.value
@@ -5,8 +10,8 @@ resource "aws_ecr_repository" "services" {
 }
 
 resource "aws_ecr_repository_policy" "cross_account_access" {
-    for_each = aws_ecr_repository.services
-    repository = each.value.name
+    for_each = local.images
+    repository = each.value
     policy = jsonencode({
         Version = "2012-10-17"
         Statement = [
@@ -15,7 +20,7 @@ resource "aws_ecr_repository_policy" "cross_account_access" {
                 Effect = "Allow"
                 Principal = {
                     AWS = concat([
-                        for id in var.spoke_account_ids:
+                        for id in local.account_ids:
                             "arn:aws:iam::${id}:root"
                     ])
                 }
@@ -37,7 +42,7 @@ resource "aws_ecr_repository_policy" "cross_account_access" {
                 Condition = {
                     StringLike = {
                         "aws:sourceARN": concat([
-                            for id in var.spoke_account_ids:
+                            for id in local.account_ids:
                                 "arn:aws:lambda:${data.aws_region.current.name}:${id}:function:*"
                         ])
                     }
