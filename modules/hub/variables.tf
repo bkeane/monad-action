@@ -10,7 +10,7 @@ variable "mutable" {
 }
 
 variable "spoke_accounts" {
-  description = "accounts to deploy to given branch match"
+  description = "accounts to deploy given branch match"
   type = set(object({
     name      = string
     id        = string

@@ -59,18 +59,18 @@ locals {
           uses = "actions/github-script@v7"
           env = {
             ACCOUNT_BRANCHES = join(",", account.branches)
+            ACCOUNT_ROLE_ARN = "arn:aws:iam::${account.id}:role/${local.oidc_spoke_role_name}"
           }
           with = {
             script = <<-EOT
             const branch = process.env.MONAD_BRANCH;
             const accepted = process.env.ACCOUNT_BRANCHES.split(',').map(b => b.trim());
             const pass = accepted.includes("*") || accepted.includes(branch)
-            const roleArn = "arn:aws:iam::${account.id}:role/${local.oidc_spoke_role_name}"
             console.log("branch:", branch);
             console.log("accepted:", accepted);
             console.log("deploy:", pass);
             core.setOutput("pass", pass);
-            core.setOutput("roleArn", roleArn);
+            core.setOutput("roleArn", process.env.ACCOUNT_ROLE_ARN);
             EOT
           }
         }
@@ -114,7 +114,6 @@ locals {
     for account in var.spoke_accounts : account.name => {
       name    = account.name
       runs-on = "ubuntu-latest"
-      needs   = keys(local.release_images)
       permissions = {
         id-token = "write"
         contents = "read"
@@ -129,6 +128,7 @@ locals {
           uses = "actions/github-script@v7"
           env = {
             ACCOUNT_BRANCHES = join(",", account.branches)
+            ACCOUNT_ROLE_ARN = "arn:aws:iam::${account.id}:role/${local.oidc_spoke_role_name}"
           }
           with = {
             script = <<-EOT
@@ -137,9 +137,9 @@ locals {
             const pass = accepted.includes("*") || accepted.includes(branch)
             console.log("branch:", branch);
             console.log("accepted:", accepted);
-            console.log("destroy:", pass);
+            console.log("deploy:", pass);
             core.setOutput("pass", pass);
-            core.setOutput("roleArn", roleArn);
+            core.setOutput("roleArn", process.env.ACCOUNT_ROLE_ARN);
             EOT
           }
         }
@@ -183,6 +183,7 @@ locals {
     for release in var.services.releases : "untag-${basename(release["MONAD_IMAGE"])}" => {
       name    = "untag ${basename(release["MONAD_IMAGE"])}"
       needs   = keys(local.destroy_services)
+      if = "!failure() && !cancelled()"
       runs-on = "ubuntu-latest"
       env     = release
       permissions = {
@@ -201,8 +202,8 @@ locals {
           }
         },
         {
-          name = "destroy"
-          run  = "monad destroy"
+          name = "untag"
+          run  = "monad untag"
         }
       ]
     }
