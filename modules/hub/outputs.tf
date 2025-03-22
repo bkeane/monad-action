@@ -9,34 +9,36 @@ locals {
     )
   }
 
+
   release_images = {
     for release in var.services.releases : "release-${basename(release["MONAD_IMAGE"])}" => {
-      name    = "${basename(release["MONAD_IMAGE"])}"
-      runs-on = "ubuntu-latest"
-      env     = release
-      permissions = {
-        id-token = "write"
-        contents = "read"
-      }
-      steps = [
-        {
-          name = "setup"
-          id   = "setup"
-          uses = "bkeane/monad-action@main"
-          with = {
-            version             = var.monad_version
-            role_arn            = local.oidc_hub_role_arn
-            registry_id         = "$${{ env.MONAD_REGISTRY_ID }}"
-            registry_region     = "$${{ env.MONAD_REGISTRY_REGION }}"
-            configure_for_build = true
-          }
-        },
-        {
-          name = "release"
-          id   = "release"
-          run  = "monad compose | docker compose -f - build --push"
+        name    = "${basename(release["MONAD_IMAGE"])}"
+        runs-on = "ubuntu-latest"
+        env     = release
+        permissions = {
+          id-token = "write"
+          contents = "read"
         }
-      ]
+        steps = flatten([
+          var.pre_release_steps,
+          {
+            name = "setup"
+            id   = "setup"
+            uses = "bkeane/monad-action@main"
+            with = {
+              version             = var.monad_version
+              role_arn            = local.oidc_hub_role_arn
+              registry_id         = "$${{ env.MONAD_REGISTRY_ID }}"
+              registry_region     = "$${{ env.MONAD_REGISTRY_REGION }}"
+              configure_for_build = true
+            }
+          },
+          {
+            name = "release"
+            id   = "release"
+            run  = "monad compose | docker compose -f - build --push"
+          }
+        ])
     }
   }
 
@@ -90,7 +92,7 @@ locals {
           contents = "read"
         }
         env = deployment
-        steps = [
+        steps = flatten([
           {
             name = "setup"
             uses = "bkeane/monad-action@main"
@@ -104,8 +106,9 @@ locals {
           {
             name = "deploy"
             run  = "monad deploy"
-          }
-        ]
+          },
+          var.post_deploy_steps
+        ])
       }
     }
   ]...)
@@ -183,7 +186,7 @@ locals {
     for release in var.services.releases : "untag-${basename(release["MONAD_IMAGE"])}" => {
       name    = "untag ${basename(release["MONAD_IMAGE"])}"
       needs   = keys(local.destroy_services)
-      if = "!failure() && !cancelled()"
+      if      = "!failure() && !cancelled()"
       runs-on = "ubuntu-latest"
       env     = release
       permissions = {
@@ -203,7 +206,7 @@ locals {
         },
         {
           name = "untag"
-          run  = "monad untag"
+          run  = "monad ecr untag"
         }
       ]
     }

@@ -95,6 +95,18 @@ variable "services" {
   }
 }
 
+variable "pre_release_steps" {
+  description = "prepend steps to release jobs"
+  type = list(any)
+  default = []
+}
+
+variable "post_deploy_steps" {
+  description = "append steps to deployment jobs"
+  type = list(any)
+  default = []
+}
+
 variable "deploy_on" {
   description = "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#on"
   type        = any
