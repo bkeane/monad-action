@@ -14,7 +14,7 @@ inputs:
   registry_region:
     description: 'The region of the ECR registry to use'
     required: true
-  configure_for_build:
+  setup_docker:
     description: 'Configure docker for build'
     required: false
     default: false
@@ -35,7 +35,7 @@ runs:
       with:
         registries: ${{ inputs.registry_id }}
     
-    - if: ${{ inputs.configure_for_build == 'true' }}
+    - if: ${{ inputs.setup_docker == 'true' }}
       name: Configure Docker Containerd Registry
       uses: docker/setup-docker-action@v4
       with:
@@ -47,11 +47,11 @@ runs:
             }
           }
 
-    - if: ${{ inputs.configure_for_build == 'true' }}
+    - if: ${{ inputs.setup_docker == 'true' }}
       name: Configure Docker QEMU
       uses: docker/setup-qemu-action@v3
 
-    - if: ${{ inputs.configure_for_build == 'true' }}
+    - if: ${{ inputs.setup_docker == 'true' }}
       name: Export actions cache url details
       uses: actions/github-script@v7
       with:
@@ -64,21 +64,21 @@ runs:
       id: cached-monad
       uses: actions/cache@v4
       with:
-        path: /tmp/bin/
+        path: ${{ runner.temp }}/bin/
         key: ${{ runner.os }}-${{ runner.arch }}-monad-${{ inputs.version }}
     
     - name: Install Monad
       if: steps.cached-monad.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        mkdir -p /tmp/bin
+        mkdir -p ${{ runner.temp }}/bin
         docker create --name monad ghcr.io/bkeane/monad:${{ inputs.version }}
-        docker cp monad:/monad /tmp/bin/monad
+        docker cp monad:/monad ${{ runner.temp }}/bin/monad
         docker rm monad
     
     - name: Append Monad to PATH
       shell: bash
-      run: echo "/tmp/bin/" >> $GITHUB_PATH
+      run: echo "${{ runner.temp }}/bin" >> $GITHUB_PATH
 
     - name: Checkout
       uses: actions/checkout@v4

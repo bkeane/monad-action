@@ -13,7 +13,7 @@ locals {
   release_images = {
     for release in var.services.releases : "release-${basename(release["MONAD_IMAGE"])}" => {
         name    = "${basename(release["MONAD_IMAGE"])}"
-        runs-on = "ubuntu-latest"
+        runs-on = var.runs_on
         env     = release
         permissions = {
           id-token = "write"
@@ -30,7 +30,7 @@ locals {
               role_arn            = local.oidc_hub_role_arn
               registry_id         = "$${{ env.MONAD_REGISTRY_ID }}"
               registry_region     = "$${{ env.MONAD_REGISTRY_REGION }}"
-              configure_for_build = true
+              setup_docker        = var.setup_docker
             }
           },
           {
@@ -45,7 +45,7 @@ locals {
   deploy_accounts = {
     for account in var.spoke_accounts : account.name => {
       name    = account.name
-      runs-on = "ubuntu-latest"
+      runs-on = var.runs_on
       needs   = keys(local.release_images)
       permissions = {
         id-token = "write"
@@ -85,7 +85,7 @@ locals {
       for deployment in var.services.deployments : "deploy-${account}-${deployment["MONAD_SERVICE"]}" => {
         name    = "deploy ${deployment["MONAD_SERVICE"]}"
         needs   = account
-        runs-on = "ubuntu-latest"
+        runs-on = var.runs_on
         if      = "needs.${account}.outputs.pass == 'true'"
         permissions = {
           id-token = "write"
@@ -116,7 +116,7 @@ locals {
   destroy_accounts = {
     for account in var.spoke_accounts : account.name => {
       name    = account.name
-      runs-on = "ubuntu-latest"
+      runs-on = var.runs_on
       permissions = {
         id-token = "write"
         contents = "read"
@@ -155,7 +155,7 @@ locals {
       for deployment in var.services.deployments : "destroy-${account}-${deployment["MONAD_SERVICE"]}" => {
         name    = "destroy ${deployment["MONAD_SERVICE"]}"
         needs   = account
-        runs-on = "ubuntu-latest"
+        runs-on = var.runs_on
         if      = "needs.${account}.outputs.pass == 'true'"
         env     = deployment
         permissions = {
@@ -187,7 +187,7 @@ locals {
       name    = "untag ${basename(release["MONAD_IMAGE"])}"
       needs   = keys(local.destroy_services)
       if      = "!failure() && !cancelled()"
-      runs-on = "ubuntu-latest"
+      runs-on = var.runs_on
       env     = release
       permissions = {
         id-token = "write"

@@ -9,6 +9,18 @@ variable "mutable" {
   default     = true
 }
 
+variable "runs_on" {
+  description = "name of the runner"
+  type        = string
+  default     = "ubuntu-latest"
+}
+
+variable "setup_docker" {
+  description = "whether to setup docker"
+  type        = bool
+  default     = true
+}
+
 variable "spoke_accounts" {
   description = "accounts to deploy given branch match"
   type = set(object({
