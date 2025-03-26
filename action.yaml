@@ -59,7 +59,7 @@ runs:
           core.exportVariable('ACTIONS_CACHE_URL', process.env['ACTIONS_CACHE_URL'])
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env['ACTIONS_RUNTIME_TOKEN'])
           core.exportVariable('ACTIONS_RUNTIME_URL', process.env['ACTIONS_RUNTIME_URL'])
-    
+
     - name: Setup Monad Cache
       id: cached-monad
       uses: actions/cache@v4
@@ -68,7 +68,7 @@ runs:
         key: ${{ runner.os }}-${{ runner.arch }}-monad-${{ inputs.version }}
     
     - name: Install Monad
-      if: steps.cached-monad.outputs.cache-hit != 'true'
+      if: steps.cached-monad.outputs.cache-hit != 'true' && inputs.version != 'latest'
       shell: bash
       run: |
         mkdir -p ${{ runner.temp }}/bin

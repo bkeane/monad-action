@@ -10,15 +10,9 @@ variable "mutable" {
 }
 
 variable "runs_on" {
-  description = "name of the runner"
+  description = "name of the github actions runner to use"
   type        = string
   default     = "ubuntu-latest"
-}
-
-variable "setup_docker" {
-  description = "whether to setup docker"
-  type        = bool
-  default     = true
 }
 
 variable "spoke_accounts" {
@@ -53,64 +47,21 @@ variable "monad_version" {
   default     = "latest"
 }
 
-variable "services" {
-  description = "monad service definitions"
-  default = {
-    releases    = []
-    deployments = []
-  }
-  type = object({
-    releases    = set(map(string))
-    deployments = set(map(string))
-  })
-
-  validation {
-    condition = alltrue([
-      for release in var.services.releases :
-      alltrue([
-        contains(keys(release), "MONAD_CHDIR"),
-        contains(keys(release), "MONAD_IMAGE")
-      ])
-    ])
-    error_message = "All release definitions must contain:\n\tMONAD_CHDIR\n\tMONAD_IMAGE"
-  }
-
-  validation {
-    condition = alltrue([
-      for deployment in var.services.deployments :
-      alltrue([
-        contains(keys(deployment), "MONAD_CHDIR"),
-        contains(keys(deployment), "MONAD_SERVICE"),
-        contains(keys(deployment), "MONAD_IMAGE")
-      ])
-    ])
-    error_message = "All deployment definitions must contain:\n\tMONAD_CHDIR\n\tMONAD_SERVICE\n\tMONAD_IMAGE"
-  }
-
-  validation {
-    condition = length(distinct([
-      for deployment in var.services.deployments :
-      deployment["MONAD_SERVICE"]
-    ])) == length(var.services.deployments)
-    error_message = "All deployment definitions must have unique MONAD_SERVICE names"
-  }
-
-  validation {
-    condition = alltrue([
-      for release in var.services.releases :
-      anytrue([
-        for deployment in var.services.deployments :
-        release["MONAD_IMAGE"] == deployment["MONAD_IMAGE"]
-      ])
-    ])
-    error_message = "All release definitions must reference a MONAD_IMAGE defined in deployments"
-  }
+variable "images" {
+  description = "monad service image repositories"
+  type = set(string)
+  default = []
 }
 
-variable "pre_release_steps" {
-  description = "prepend steps to release jobs"
-  type = list(any)
+variable "services" {
+  description = "monad service deployment definitions"
   default = []
+  type = set(object({
+    name = string
+    entrypoint = optional(string, "monad")
+    deploy_cmd = optional(list(string), ["deploy"])
+    destroy_cmd = optional(list(string), ["destroy"])
+  }))
 }
 
 variable "post_deploy_steps" {
@@ -123,10 +74,7 @@ variable "deploy_on" {
   description = "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#on"
   type        = any
   default = {
-    pull_request = {}
-    push = {
-      branches = ["main"]
-    }
+    workflow_call = {}
   }
 }
 
@@ -134,8 +82,22 @@ variable "destroy_on" {
   description = "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#on"
   type        = any
   default = {
-    pull_request_target = {
-      types = ["closed"]
-    }
+    workflow_call = {}
+  }
+}
+
+variable "untag_on" {
+  description = "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#on"
+  type        = any
+  default = {
+    workflow_call = {}
+  }
+}
+
+variable "build_on" {
+  description = "https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#on"
+  type        = any
+  default = {
+    workflow_call = {}
   }
 }

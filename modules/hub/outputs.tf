@@ -9,190 +9,35 @@ locals {
     )
   }
 
+  build = {
+    name        = "hub config"
+    description = "Composite action to configure environment for build and push to the hub ECR registry"
 
-  release_images = {
-    for release in var.services.releases : "release-${basename(release["MONAD_IMAGE"])}" => {
-        name    = "${basename(release["MONAD_IMAGE"])}"
-        runs-on = var.runs_on
-        env     = release
-        permissions = {
-          id-token = "write"
-          contents = "read"
-        }
-        steps = flatten([
-          var.pre_release_steps,
-          {
-            name = "setup"
-            id   = "setup"
-            uses = "bkeane/monad-action@main"
-            with = {
-              version             = var.monad_version
-              role_arn            = local.oidc_hub_role_arn
-              registry_id         = "$${{ env.MONAD_REGISTRY_ID }}"
-              registry_region     = "$${{ env.MONAD_REGISTRY_REGION }}"
-              setup_docker        = var.setup_docker
-            }
-          },
-          {
-            name = "release"
-            id   = "release"
-            run  = "monad compose | docker compose -f - build --push"
-          }
-        ])
-    }
-  }
-
-  deploy_accounts = {
-    for account in var.spoke_accounts : account.name => {
-      name    = account.name
-      runs-on = var.runs_on
-      needs   = keys(local.release_images)
-      permissions = {
-        id-token = "write"
-        contents = "read"
+    inputs = {
+      registry_id     = {
+        required = true
+        default  = data.aws_caller_identity.current.account_id
+        type     = "string"
       }
-      outputs = {
-        pass    = "$${{ steps.branch-check.outputs.pass }}"
-        roleArn = "$${{ steps.branch-check.outputs.roleArn }}"
+      registry_region = {
+        required = true
+        default  = data.aws_region.current.name
+        type     = "string"
       }
-      steps = [
-        {
-          id   = "branch-check"
-          uses = "actions/github-script@v7"
-          env = {
-            ACCOUNT_BRANCHES = join(",", account.branches)
-            ACCOUNT_ROLE_ARN = "arn:aws:iam::${account.id}:role/${local.oidc_spoke_role_name}"
-          }
-          with = {
-            script = <<-EOT
-            const branch = process.env.MONAD_BRANCH;
-            const accepted = process.env.ACCOUNT_BRANCHES.split(',').map(b => b.trim());
-            const pass = accepted.includes("*") || accepted.includes(branch)
-            console.log("branch:", branch);
-            console.log("accepted:", accepted);
-            console.log("deploy:", pass);
-            core.setOutput("pass", pass);
-            core.setOutput("roleArn", process.env.ACCOUNT_ROLE_ARN);
-            EOT
-          }
-        }
-      ]
-    }
-  }
-
-  deploy_services = merge([
-    for account, job in local.deploy_accounts : {
-      for deployment in var.services.deployments : "deploy-${account}-${deployment["MONAD_SERVICE"]}" => {
-        name    = "deploy ${deployment["MONAD_SERVICE"]}"
-        needs   = account
-        runs-on = var.runs_on
-        if      = "needs.${account}.outputs.pass == 'true'"
-        permissions = {
-          id-token = "write"
-          contents = "read"
-        }
-        env = deployment
-        steps = flatten([
-          {
-            name = "setup"
-            uses = "bkeane/monad-action@main"
-            with = {
-              version         = var.monad_version
-              role_arn        = "$${{ needs.${account}.outputs.roleArn }}"
-              registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
-              registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
-            }
-          },
-          {
-            name = "deploy"
-            run  = "monad deploy"
-          },
-          var.post_deploy_steps
-        ])
+      monad_branch = {
+        required = false
+        default  = "$${{ github.head_ref || github.ref_name }}"
+        type     = "string"
+      }
+      monad_sha = {
+        required = false
+        default  = "$${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+        type     = "string"
       }
     }
-  ]...)
 
-  destroy_accounts = {
-    for account in var.spoke_accounts : account.name => {
-      name    = account.name
-      runs-on = var.runs_on
-      permissions = {
-        id-token = "write"
-        contents = "read"
-      }
-      outputs = {
-        pass    = "$${{ steps.branch-check.outputs.pass }}"
-        roleArn = "$${{ steps.branch-check.outputs.roleArn }}"
-      }
-      steps = [
-        {
-          id   = "branch-check"
-          uses = "actions/github-script@v7"
-          env = {
-            ACCOUNT_BRANCHES = join(",", account.branches)
-            ACCOUNT_ROLE_ARN = "arn:aws:iam::${account.id}:role/${local.oidc_spoke_role_name}"
-          }
-          with = {
-            script = <<-EOT
-            const branch = process.env.MONAD_BRANCH;
-            const accepted = process.env.ACCOUNT_BRANCHES.split(',').map(b => b.trim());
-            const pass = accepted.includes("*") || accepted.includes(branch)
-            console.log("branch:", branch);
-            console.log("accepted:", accepted);
-            console.log("deploy:", pass);
-            core.setOutput("pass", pass);
-            core.setOutput("roleArn", process.env.ACCOUNT_ROLE_ARN);
-            EOT
-          }
-        }
-      ]
-    }
-  }
-
-  destroy_services = merge([
-    for account, job in local.destroy_accounts : {
-      for deployment in var.services.deployments : "destroy-${account}-${deployment["MONAD_SERVICE"]}" => {
-        name    = "destroy ${deployment["MONAD_SERVICE"]}"
-        needs   = account
-        runs-on = var.runs_on
-        if      = "needs.${account}.outputs.pass == 'true'"
-        env     = deployment
-        permissions = {
-          id-token = "write"
-          contents = "read"
-        }
-        steps = [
-          {
-            name = "setup"
-            uses = "bkeane/monad-action@main"
-            with = {
-              version         = var.monad_version
-              role_arn        = "$${{ needs.${account}.outputs.roleArn }}"
-              registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
-              registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
-            }
-          },
-          {
-            name = "destroy"
-            run  = "monad destroy"
-          }
-        ]
-      }
-    }
-  ]...)
-
-  untag_images = {
-    for release in var.services.releases : "untag-${basename(release["MONAD_IMAGE"])}" => {
-      name    = "untag ${basename(release["MONAD_IMAGE"])}"
-      needs   = keys(local.destroy_services)
-      if      = "!failure() && !cancelled()"
-      runs-on = var.runs_on
-      env     = release
-      permissions = {
-        id-token = "write"
-        contents = "read"
-      }
+    runs = {
+      using = "composite"
       steps = [
         {
           name = "setup"
@@ -200,39 +45,192 @@ locals {
           with = {
             version         = var.monad_version
             role_arn        = local.oidc_hub_role_arn
-            registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
-            registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
+            registry_id     = data.aws_caller_identity.current.account_id
+            registry_region = data.aws_region.current.name
+            setup_docker    = true
           }
         },
         {
-          name = "untag"
-          run  = "monad ecr untag"
+          name = "export"
+          uses = "actions/github-script@v7"
+          with = {
+            script = <<-EOT
+          core.exportVariable('MONAD_REGISTRY_ID', '$${{ inputs.registry_id }}');
+          core.exportVariable('MONAD_REGISTRY_REGION', '$${{ inputs.registry_region }}');
+          core.exportVariable('MONAD_BRANCH', '$${{ inputs.monad_branch }}');
+          core.exportVariable('MONAD_SHA', '$${{ inputs.monad_sha }}');
+          EOT
+          }
         }
       ]
     }
   }
+
+  gate = {
+    for account in var.spoke_accounts : account.name => {
+      name    = account.name
+      runs-on = var.runs_on
+      permissions = {
+        id-token = "write"
+        contents = "read"
+      }
+      outputs = {
+        pass    = "$${{ steps.branch-check.outputs.pass }}"
+        roleArn = "$${{ steps.branch-check.outputs.roleArn }}"
+      }
+      steps = [
+        {
+          id   = "branch-check"
+          uses = "actions/github-script@v7"
+          env = {
+            ACCOUNT_BRANCHES = join(",", account.branches)
+            ACCOUNT_ROLE_ARN = "arn:aws:iam::${account.id}:role/${local.oidc_spoke_role_name}"
+          }
+          with = {
+            script = <<-EOT
+            const branch = process.env.MONAD_BRANCH;
+            const accepted = process.env.ACCOUNT_BRANCHES.split(',').map(b => b.trim());
+            const pass = accepted.includes("*") || accepted.includes(branch)
+            console.log("branch:", branch);
+            console.log("accepted:", accepted);
+            console.log("deploy:", pass);
+            core.setOutput("pass", pass);
+            core.setOutput("roleArn", process.env.ACCOUNT_ROLE_ARN);
+            EOT
+          }
+        }
+      ]
+    }
+  }
+
+  deploy = merge([
+    for account, job in local.gate : {
+      for service in var.services : "deploy-${account}-${service.name}" => {
+        if      = "needs.${account}.outputs.pass == 'true'"
+        needs   = account
+        runs-on = var.runs_on
+        name    = "deploy ${service.name}"
+        env = {
+          MONAD_SERVICE = service.name
+        }
+
+        permissions = {
+          id-token = "write"
+          contents = "read"
+        }
+
+        steps = flatten([
+          {
+            name = "${account} spoke config"
+            uses = "bkeane/monad-action@main"
+            with = {
+              version         = var.monad_version
+              role_arn        = "$${{ needs.${account}.outputs.roleArn }}"
+              registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
+              registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
+            }
+          },
+          {
+            name = "deploy ${service.name} to ${account}"
+            run  = "${service.entrypoint} ${join(" ", service.deploy_cmd)}"
+          },
+          var.post_deploy_steps
+        ])
+      }
+    }
+  ]...)
+
+  destroy = merge([
+    for account, job in local.gate : {
+      for service in var.services : "destroy-${account}-${service.name}" => {
+        if      = "needs.${account}.outputs.pass == 'true'"
+        needs   = account
+        runs-on = var.runs_on
+        name    = "destroy ${service.name}"
+        env = {
+          MONAD_SERVICE = service.name
+        }
+        permissions = {
+          id-token = "write"
+          contents = "read"
+        }
+        steps = [
+          {
+            name = "${account} spoke config"
+            uses = "bkeane/monad-action@main"
+            with = {
+              version         = var.monad_version
+              role_arn        = "$${{ needs.${account}.outputs.roleArn }}"
+              registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
+              registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
+            }
+          },
+          {
+            name = "destroy ${service.name} in ${account}"
+            run  = "${service.entrypoint} ${join(" ", service.destroy_cmd)}"
+          }
+        ]
+      }
+    }
+  ]...)
+
+  untag = {
+    runs-on = var.runs_on
+    name    = "untag"
+    steps = flatten([
+      {
+        name = "setup"
+        uses = "bkeane/monad-action@main"
+        with = {
+          version         = var.monad_version
+          role_arn        = local.oidc_hub_role_arn
+          registry_id     = "$${{ env.MONAD_REGISTRY_ID }}"
+          registry_region = "$${{ env.MONAD_REGISTRY_REGION }}"
+        }
+      },
+      [
+        for image in var.images : {
+          name = "untag ${image}"
+          run  = "monad ecr untag --image ${image}"
+        }
+      ]
+    ])
+  }
 }
 
-output "deploy" {
+output "up_shared_workflow" {
   value = yamlencode(merge(local.workflow_common, {
-    name = "Deploy"
+    name = "Up"
     on   = var.deploy_on
     jobs = merge(
-      local.release_images,
-      local.deploy_accounts,
-      local.deploy_services
+      local.gate,
+      local.deploy
     )
   }))
 }
 
-output "destroy" {
+output "down_shared_workflow" {
   value = yamlencode(merge(local.workflow_common, {
-    name = "Destroy"
+    name = "Down"
     on   = var.destroy_on
     jobs = merge(
-      local.destroy_accounts,
-      local.destroy_services,
-      local.untag_images
+      local.gate,
+      local.destroy
     )
   }))
 }
+
+output "untag_shared_workflow" {
+  value = yamlencode(merge(local.workflow_common, {
+    name = "Untag"
+    on   = var.untag_on
+    jobs = {
+      untag = local.untag
+    }
+  }))
+}
+
+output "build_composite_action" {
+  value = yamlencode(local.build)
+}
+

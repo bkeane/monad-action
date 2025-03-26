@@ -1,17 +1,16 @@
 locals {
-    images = toset([ for release in var.services.releases : release["MONAD_IMAGE"] ])
     account_ids = toset([ for account in var.spoke_accounts : account.id ])
 }
 
 resource "aws_ecr_repository" "services" {
-    for_each = local.images
+    for_each = var.images
     name = each.value
     image_tag_mutability = var.mutable ? "MUTABLE" : "IMMUTABLE"
 }
 
 resource "aws_ecr_repository_policy" "cross_account_access" {
-    for_each = local.images
-    repository = each.value
+    for_each = aws_ecr_repository.services
+    repository = each.value.name
     policy = jsonencode({
         Version = "2012-10-17"
         Statement = [
