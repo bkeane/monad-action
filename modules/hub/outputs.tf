@@ -14,7 +14,7 @@ locals {
     description = "Composite action to configure environment for build and push to the hub ECR registry"
 
     inputs = {
-      registry_id     = {
+      registry_id = {
         required = true
         default  = data.aws_caller_identity.current.account_id
         type     = "string"
@@ -177,6 +177,10 @@ locals {
   untag = {
     runs-on = var.runs_on
     name    = "untag"
+    permissions = {
+      id-token = "write"
+      contents = "read"
+    }
     steps = flatten([
       {
         name = "setup"
@@ -191,7 +195,7 @@ locals {
       [
         for image in var.images : {
           name = "untag ${image}"
-          run  = "monad ecr untag --image ${image}"
+          run  = "monad ecr untag --image ${image}:$${{env.MONAD_BRANCH}}"
         }
       ]
     ])
