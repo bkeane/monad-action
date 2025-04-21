@@ -36,9 +36,10 @@ runs:
         registries: ${{ inputs.registry_id }}
     
     - if: ${{ inputs.setup_docker == 'true' }}
-      name: Configure Docker Containerd Registry
+      name: Setup Docker
       uses: docker/setup-docker-action@v4
       with:
+        version: latest
         daemon-config: |
           {
             "debug": true,
@@ -48,8 +49,22 @@ runs:
           }
 
     - if: ${{ inputs.setup_docker == 'true' }}
-      name: Configure Docker QEMU
+      name: Setup Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        version: latest
+
+    - if: ${{ inputs.setup_docker == 'true' }}
+      name: Setup Compose
+      uses: docker/setup-compose-action@v1
+      with:
+        version: latest
+
+    - if: ${{ inputs.setup_docker == 'true' }}
+      name: Setup QEMU
       uses: docker/setup-qemu-action@v3
+      with:
+        version: latest
 
     - if: ${{ inputs.setup_docker == 'true' }}
       name: Export actions cache url details
