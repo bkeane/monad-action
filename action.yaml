@@ -63,8 +63,6 @@ runs:
     - if: ${{ inputs.setup_docker == 'true' }}
       name: Setup QEMU
       uses: docker/setup-qemu-action@v3
-      with:
-        version: latest
 
     - if: ${{ inputs.setup_docker == 'true' }}
       name: Export actions cache url details
