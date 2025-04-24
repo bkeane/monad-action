@@ -5,6 +5,10 @@ inputs:
     description: 'https://github.com/bkeane/monad/releases'
     required: true
     default: latest
+  checkout:
+    description: 'Checkout the repository'
+    required: false
+    default: true
   role_arn:
     description: 'The ARN of the AWS role to use'
     required: true
@@ -23,6 +27,7 @@ runs:
   using: composite
   steps:
     - name: Assume Role
+      id: assume-role
       uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ inputs.role_arn }}
@@ -30,13 +35,14 @@ runs:
         aws-region: ${{ inputs.registry_region }}
 
     - name: Login to ECR
-      id: login-ecr
+      id: ecr-login
       uses: aws-actions/amazon-ecr-login@v2
       with:
         registries: ${{ inputs.registry_id }}
     
-    - if: ${{ inputs.setup_docker == 'true' }}
-      name: Setup Docker
+    - name: Setup Docker
+      if: ${{ inputs.setup_docker == 'true' }}
+      id: setup-docker
       uses: docker/setup-docker-action@v4
       with:
         version: latest
@@ -48,19 +54,21 @@ runs:
             }
           }
 
-    - if: ${{ inputs.setup_docker == 'true' }}
-      name: Setup Buildx
+    - name: Setup Buildx
+      if: ${{ inputs.setup_docker == 'true' }}
+      id: setup-buildx
       uses: docker/setup-buildx-action@v3
       with:
         version: latest
 
-    - if: ${{ inputs.setup_docker == 'true' }}
-      name: Setup QEMU
+    - name: Setup QEMU
+      if: ${{ inputs.setup_docker == 'true' }}
+      id: setup-qemu
       uses: docker/setup-qemu-action@v3
 
-    - name: Setup Monad Cache
+    - name: Setup Cache
       if: inputs.version != 'latest'
-      id: cached-monad
+      id: setup-monad-cache
       uses: actions/cache@v4
       with:
         path: ${{ runner.temp }}/bin/
@@ -68,6 +76,7 @@ runs:
     
     - name: Install Monad
       if: steps.cached-monad.outputs.cache-hit != 'true'
+      id: install-monad
       shell: bash
       run: |
         mkdir -p ${{ runner.temp }}/bin
@@ -75,11 +84,15 @@ runs:
         docker cp monad:/monad ${{ runner.temp }}/bin/monad
         docker rm monad
     
-    - name: Append Monad to PATH
+    - name: Setup Monad
+      id: setup-monad
       shell: bash
-      run: echo "${{ runner.temp }}/bin" >> $GITHUB_PATH
+      run: |
+        echo "${{ runner.temp }}/bin" >> $GITHUB_PATH
 
     - name: Checkout
+      if: inputs.checkout == 'true'
+      id: checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
