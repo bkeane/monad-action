@@ -10,9 +10,9 @@ data "aws_iam_openid_connect_provider" "github" {
 # GitHub Actions Role
 #
 
-resource "aws_iam_role" "hub" {
-  name                  = local.oidc_hub_role_name
-  description           = "used by ${var.origin} github actions"
+resource "aws_iam_role" "integration" {
+  name                  = var.topology.resource.integration_account_role_name
+  description           = "used by ${var.topology.git.origin} github actions"
   assume_role_policy    = data.aws_iam_policy_document.trust.json
   force_detach_policies = true
 }
@@ -36,28 +36,28 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        local.oidc_subject_claim
+        var.topology.resource.oidc_subject_claim
       ]
     }
   }
 }
 
 resource "aws_iam_role_policy_attachment" "github" {
-  role       = aws_iam_role.hub.name
-  policy_arn = aws_iam_policy.hub.arn
+  role       = aws_iam_role.integration.name
+  policy_arn = aws_iam_policy.integration.arn
 }
 
 #
 # GitHub Actions Policy
 #
 
-resource "aws_iam_policy" "hub" {
-  name        = "${local.oidc_hub_role_name}-policy"
-  description = "used by ${var.origin} github actions"
-  policy      = data.aws_iam_policy_document.hub.json
+resource "aws_iam_policy" "integration" {
+  name        = "${var.topology.resource.integration_account_role_name}-policy"
+  description = "used by ${var.topology.git.origin} github actions"
+  policy      = data.aws_iam_policy_document.integration.json
 }
 
-data "aws_iam_policy_document" "hub" {
+data "aws_iam_policy_document" "integration" {
   statement {
     sid    = "AllowEcrRegistryRead"
     effect = "Allow"
@@ -76,7 +76,7 @@ data "aws_iam_policy_document" "hub" {
       "ecr:*",
     ]
     resources = [
-      "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/${local.repository_wildcard}"
+      "arn:aws:ecr:*:${var.topology.integration_account_id}:repository/${var.topology.resource.image_path_wildcard}"
     ]
   }
 }

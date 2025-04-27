@@ -1,5 +1,5 @@
 locals {
-    account_ids = toset([ for account in var.spoke_accounts : account.id ])
+    account_ids = toset([ for id in values(var.topology.deployment_accounts) : id ])
 }
 
 resource "aws_ecr_repository" "services" {
@@ -42,7 +42,7 @@ resource "aws_ecr_repository_policy" "cross_account_access" {
                     StringLike = {
                         "aws:sourceARN": concat([
                             for id in local.account_ids:
-                                "arn:aws:lambda:${data.aws_region.current.name}:${id}:function:*"
+                                "arn:aws:lambda:*:${id}:function:*"
                         ])
                     }
                 }

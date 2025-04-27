@@ -7,7 +7,7 @@ locals {
 #
 
 data "aws_iam_openid_connect_provider" "github" {
-  arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+  arn = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 #
@@ -16,8 +16,8 @@ data "aws_iam_openid_connect_provider" "github" {
 
 resource "aws_iam_policy" "boundary" {
   count       = var.boundary_policy_document != null ? 1 : 0
-  name        = local.boundary_policy_name
-  description = "permission boundary for roles created by ${var.origin} github actions"
+  name        = var.topology.resource.boundary_policy_name
+  description = "permission boundary for roles created by ${var.topology.origin} github actions"
   policy      = var.boundary_policy_document.json
 }
 
@@ -27,8 +27,8 @@ resource "aws_iam_policy" "boundary" {
 
 resource "aws_iam_policy" "extended" {
   count       = var.extended_policy_document != null ? 1 : 0
-  name        = "${local.oidc_spoke_role_name}-policy-extended"
-  description = "additional policy for ${var.origin} github actions"
+  name        = "${var.topology.resource.deployment_account_role_name}-policy-extended"
+  description = "additional policy for ${var.topology.origin} github actions"
   policy      = var.extended_policy_document.json
 }
 
@@ -43,8 +43,8 @@ resource "aws_iam_role_policy_attachment" "extended" {
 #
 
 resource "aws_iam_role" "spoke" {
-  name                  = local.oidc_spoke_role_name
-  description           = "used by ${var.origin} github actions"
+  name                  = var.topology.resource.deployment_account_role_name
+  description           = "used by ${var.topology.origin} github actions"
   assume_role_policy    = data.aws_iam_policy_document.trust.json
   force_detach_policies = true
 }
@@ -68,7 +68,7 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        local.oidc_subject_claim
+        var.topology.resource.oidc_subject_claim
       ]
     }
   }
@@ -84,8 +84,8 @@ resource "aws_iam_role_policy_attachment" "spoke" {
 #
 
 resource "aws_iam_policy" "spoke" {
-  name        = "${local.oidc_spoke_role_name}-policy"
-  description = "used by ${var.origin} github actions"
+  name        = "${var.topology.resource.deployment_account_role_name}-policy"
+  description = "used by ${var.topology.origin} github actions"
   policy      = data.aws_iam_policy_document.spoke.json
 }
 
@@ -114,7 +114,7 @@ data "aws_iam_policy_document" "spoke" {
     ]
 
     resources = [
-      "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/${local.image_wildcard}"
+      "arn:aws:ecr:*:${local.account_id}:repository/${var.topology.resource.image_path_wildcard}"
     ]
   }
 
@@ -154,7 +154,7 @@ data "aws_iam_policy_document" "spoke" {
       "iam:*"
     ]
     resources = [
-      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AWSLambdaVPCAccessExecutionRole",
+      "arn:aws:iam::${local.account_id}:role/AWSLambdaVPCAccessExecutionRole",
       "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
     ]
   }
@@ -166,8 +166,8 @@ data "aws_iam_policy_document" "spoke" {
       "iam:*"
     ]
     resources = [
-      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${local.resource_wildcard}",
-      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_wildcard}",
+      "arn:aws:iam::${local.account_id}:policy/${var.topology.resource.resource_name_wildcard}",
+      "arn:aws:iam::${local.account_id}:role/${var.topology.resource.resource_name_wildcard}",
     ]
   }
 
@@ -177,7 +177,7 @@ data "aws_iam_policy_document" "spoke" {
       sid       = "DenyRoleCreateWithoutBoundary"
       effect    = "Deny"
       actions   = ["iam:CreateRole"]
-      resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.resource_wildcard}"]
+      resources = ["arn:aws:iam::${local.account_id}:role/${var.topology.resource.resource_name_wildcard}"]
       condition {
         test     = "StringNotEquals"
         variable = "iam:PermissionsBoundary"
@@ -193,7 +193,7 @@ data "aws_iam_policy_document" "spoke" {
       "lambda:*"
     ]
     resources = [
-      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.resource_wildcard}",
+      "arn:aws:lambda:*:${local.account_id}:function:${var.topology.resource.resource_name_wildcard}",
     ]
   }
 
@@ -214,9 +214,9 @@ data "aws_iam_policy_document" "spoke" {
     ]
     resources = flatten([
       for id in var.api_gateway_ids : [
-        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${id}",
-        "arn:aws:apigateway:${data.aws_region.current.name}::/apis/${id}/*",
-        "arn:aws:apigateway:${data.aws_region.current.name}::/tags/${id}",
+        "arn:aws:apigateway:*::/apis/${id}",
+        "arn:aws:apigateway:*::/apis/${id}/*",
+        "arn:aws:apigateway:*::/tags/${id}",
       ]
     ])
   }
@@ -228,8 +228,8 @@ data "aws_iam_policy_document" "spoke" {
       "logs:*"
     ]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${local.path_wildcard}",
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${local.path_wildcard}:*",
+      "arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.topology.resource.resource_path_wildcard}",
+      "arn:aws:logs:*:${local.account_id}:log-group:/aws/lambda/${var.topology.resource.resource_path_wildcard}:*",
     ]
   }
 
@@ -250,7 +250,7 @@ data "aws_iam_policy_document" "spoke" {
       "events:*"
     ]
     resources = [
-      "arn:aws:events:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:rule/${local.resource_wildcard}"
+      "arn:aws:events:*:${local.account_id}:rule/${var.topology.resource.resource_name_wildcard}"
     ]
   }
 
