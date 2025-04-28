@@ -4,9 +4,10 @@ variable "topology" {
     monad_version = string
     integration_account_name = string
     integration_account_id = string
-    integration_account_region = string
-    integration_account_images = set(string)
+    integration_account_ecr_region = string
+    integration_account_ecr_paths = set(string)
     deployment_accounts = map(string)
+    oidc_subject_claim = string
 
     resource = object({
       integration_account_role_name = string
@@ -21,7 +22,7 @@ variable "topology" {
     
     git = object({
       origin = string
-      name = string
+      repo = string
       owner = string
       path = string
     })
@@ -38,10 +39,4 @@ variable "runs_on" {
   description = "name of the github actions runner to use"
   type        = string
   default     = "ubuntu-latest"
-}
-
-variable "images" {
-  description = "monad service image repositories"
-  type = set(string)
-  default = []
 }

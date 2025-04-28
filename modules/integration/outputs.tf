@@ -1,30 +1,9 @@
 locals {
-  action = {
+  integration = {
     name        = "continuous integration"
     description = "Composite action for continuous integration"
 
-    inputs = {
-      registry_id = {
-        required = true
-        default  = data.aws_caller_identity.current.account_id
-        type     = "string"
-      }
-      registry_region = {
-        required = true
-        default  = data.aws_region.current.name
-        type     = "string"
-      }
-      monad_branch = {
-        required = false
-        default  = "$${{ github.head_ref || github.ref_name }}"
-        type     = "string"
-      }
-      monad_sha = {
-        required = false
-        default  = "$${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-        type     = "string"
-      }
-    }
+    inputs = {}
 
     runs = {
       using = "composite"
@@ -34,23 +13,69 @@ locals {
           uses = "bkeane/monad-action@main"
           with = {
             version         = var.topology.monad_version
-            role_arn        = var.topology.integration_role_arn
+            role_arn        = var.topology.resource.integration_account_role_arn
             registry_id     = var.topology.integration_account_id
-            registry_region = data.aws_region.current.name
+            registry_region = var.topology.integration_account_ecr_region
             setup_docker    = true
             checkout        = true
           }
-        },
+        }
+      ]
+    }
+  }
+
+  deployment = {
+    name        = "monad continuous deployment"
+    description = "Monad composite action for continuous deployment"
+
+    inputs = {
+      account = {
+        required = true
+        type     = "string"
+      }
+    }
+
+    outputs = {
+      role_arn = {
+        description = "The role arn for the given account"
+        value = "$${{ steps.validation.outputs.role_arn }}"
+      }
+    }
+
+    runs = {
+      using = "composite"
+      steps = [
         {
-          name = "export"
+          name = "validation"
+          id   = "validation"
           uses = "actions/github-script@v7"
+          env = {
+            ACCOUNT_ROLE_ARNS = jsonencode(var.topology.resource.deployment_account_role_arns)
+          }
           with = {
             script = <<-EOT
-          core.exportVariable('MONAD_REGISTRY_ID', '$${{ inputs.registry_id }}');
-          core.exportVariable('MONAD_REGISTRY_REGION', '$${{ inputs.registry_region }}');
-          core.exportVariable('MONAD_BRANCH', '$${{ inputs.monad_branch }}');
-          core.exportVariable('MONAD_SHA', '$${{ inputs.monad_sha }}');
-          EOT
+            const account_role_arns = JSON.parse(process.env.ACCOUNT_ROLE_ARNS);
+            const given_account = '$${{ inputs.account }}';
+            const valid_accounts = Object.keys(account_role_arns).join(', ');
+            if (!(given_account in account_role_arns)) {
+              console.error('Invalid account name given: ' + given_account);
+              console.error('Valid accounts are: ' + valid_accounts);
+              core.setFailed('input validation failed');
+            }
+            core.setOutput('role_arn', account_role_arns[given_account]);
+            EOT
+          }
+        },
+        {
+          name = "setup"
+          uses = "bkeane/monad-action@main"
+          with = {
+            version         = var.topology.monad_version
+            role_arn        = "$${{ steps.validation.outputs.role_arn }}"
+            registry_id     = var.topology.integration_account_id
+            registry_region = var.topology.integration_account_ecr_region
+            setup_docker    = false
+            checkout        = true
           }
         }
       ]
@@ -58,6 +83,10 @@ locals {
   }
 }
 
-output "action" {
-  value = yamlencode(local.action)
+output "integration_action" {
+  value = yamlencode(local.integration)
+}
+
+output "deployment_action" {
+  value = yamlencode(local.deployment)
 }

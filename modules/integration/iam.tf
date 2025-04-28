@@ -36,7 +36,7 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        var.topology.resource.oidc_subject_claim
+        var.topology.oidc_subject_claim
       ]
     }
   }

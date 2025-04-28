@@ -1,9 +1,9 @@
 locals {
-    account_ids = toset([ for id in values(var.topology.deployment_accounts) : id ])
+    deployment_account_ids = toset([ for id in values(var.topology.deployment_accounts) : id ])
 }
 
 resource "aws_ecr_repository" "services" {
-    for_each = var.images
+    for_each = var.topology.integration_account_ecr_paths
     name = each.value
     image_tag_mutability = var.mutable ? "MUTABLE" : "IMMUTABLE"
 }
@@ -19,7 +19,7 @@ resource "aws_ecr_repository_policy" "cross_account_access" {
                 Effect = "Allow"
                 Principal = {
                     AWS = concat([
-                        for id in local.account_ids:
+                        for id in local.deployment_account_ids:
                             "arn:aws:iam::${id}:root"
                     ])
                 }
@@ -41,7 +41,7 @@ resource "aws_ecr_repository_policy" "cross_account_access" {
                 Condition = {
                     StringLike = {
                         "aws:sourceARN": concat([
-                            for id in local.account_ids:
+                            for id in local.deployment_account_ids:
                                 "arn:aws:lambda:*:${id}:function:*"
                         ])
                     }

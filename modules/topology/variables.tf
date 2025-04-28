@@ -37,14 +37,12 @@ variable "integration_account_id" {
     }
 }
 
-variable "integration_account_region" {
-    description = "integration account region"
+variable "integration_account_ecr_region" {
+    description = "integration account ECR region"
     type = string
-    default = "caller region"
 }
 
-variable "integration_account_images" {
+variable "integration_account_ecr_paths" {
     description = "image paths for integration account ECR repositories"
     type = set(string)
-    default = []
 }
