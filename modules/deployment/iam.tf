@@ -15,7 +15,7 @@ data "aws_iam_openid_connect_provider" "github" {
 #
 
 resource "aws_iam_policy" "boundary" {
-  count       = var.boundary_policy_document != null ? 1 : 0
+  count       = var.topology.resource.enable_boundary_policy ? 1 : 0
   name        = var.topology.resource.boundary_policy_name
   description = "permission boundary for roles created by ${var.topology.git.origin} github actions"
   policy      = var.boundary_policy_document.json
@@ -26,14 +26,14 @@ resource "aws_iam_policy" "boundary" {
 #
 
 resource "aws_iam_policy" "extended" {
-  count       = var.extended_policy_document != null ? 1 : 0
-  name        = "${var.topology.resource.deployment_account_role_name}-policy-extended"
+  count       = var.oidc_policy_document != null ? 1 : 0
+  name        = "${var.topology.oidc.deployment_role_name}-policy-extended"
   description = "additional policy for ${var.topology.git.origin} github actions"
-  policy      = var.extended_policy_document.json
+  policy      = var.oidc_policy_document.json
 }
 
 resource "aws_iam_role_policy_attachment" "extended" {
-  count      = var.extended_policy_document != null ? 1 : 0
+  count      = var.oidc_policy_document != null ? 1 : 0
   role       = aws_iam_role.deployment.name
   policy_arn = aws_iam_policy.extended[0].arn
 }
@@ -43,7 +43,7 @@ resource "aws_iam_role_policy_attachment" "extended" {
 #
 
 resource "aws_iam_role" "deployment" {
-  name                  = var.topology.resource.deployment_account_role_name
+  name                  = var.topology.oidc.deployment_role_name
   description           = "used by ${var.topology.git.origin} github actions"
   assume_role_policy    = data.aws_iam_policy_document.trust.json
   force_detach_policies = true
@@ -68,7 +68,7 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        var.topology.oidc_subject_claim
+        var.topology.oidc.subject_claim
       ]
     }
   }
@@ -84,7 +84,7 @@ resource "aws_iam_role_policy_attachment" "github" {
 #
 
 resource "aws_iam_policy" "deployment" {
-  name        = "${var.topology.resource.deployment_account_role_name}-policy"
+  name        = "${var.topology.oidc.deployment_role_name}-policy"
   description = "used by ${var.topology.git.origin} github actions"
   policy      = data.aws_iam_policy_document.deployment.json
 }
@@ -132,8 +132,7 @@ data "aws_iam_policy_document" "deployment" {
   }
 
   dynamic "statement" {
-    // Premature optimization around potential stupidity, but \o/
-    for_each = var.boundary_policy_document != null ? [1] : []
+    for_each = var.topology.resource.enable_boundary_policy ? [1] : []
     content {
       sid    = "DenyBoundaryPolicyDeletion"
       effect = "Deny"
@@ -144,6 +143,21 @@ data "aws_iam_policy_document" "deployment" {
       resources = [
         local.boundary_policy_arn
       ]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.topology.resource.enable_boundary_policy ? [1] : []
+    content {
+      sid       = "DenyRoleCreateWithoutBoundary"
+      effect    = "Deny"
+      actions   = ["iam:CreateRole"]
+      resources = ["arn:aws:iam::${local.account_id}:role/${var.topology.resource.resource_name_wildcard}"]
+      condition {
+        test     = "StringNotEquals"
+        variable = "iam:PermissionsBoundary"
+        values   = [local.boundary_policy_arn]
+      }
     }
   }
 
@@ -171,20 +185,7 @@ data "aws_iam_policy_document" "deployment" {
     ]
   }
 
-  dynamic "statement" {
-    for_each = var.boundary_policy_document != null ? [1] : []
-    content {
-      sid       = "DenyRoleCreateWithoutBoundary"
-      effect    = "Deny"
-      actions   = ["iam:CreateRole"]
-      resources = ["arn:aws:iam::${local.account_id}:role/${var.topology.resource.resource_name_wildcard}"]
-      condition {
-        test     = "StringNotEquals"
-        variable = "iam:PermissionsBoundary"
-        values   = [local.boundary_policy_arn]
-      }
-    }
-  }
+
 
   statement {
     sid    = "AllowLambdaWrite"

@@ -11,7 +11,7 @@ data "aws_iam_openid_connect_provider" "github" {
 #
 
 resource "aws_iam_role" "integration" {
-  name                  = var.topology.resource.integration_account_role_name
+  name                  = var.topology.oidc.integration_role_name
   description           = "used by ${var.topology.git.origin} github actions"
   assume_role_policy    = data.aws_iam_policy_document.trust.json
   force_detach_policies = true
@@ -36,7 +36,7 @@ data "aws_iam_policy_document" "trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        var.topology.oidc_subject_claim
+        var.topology.oidc.subject_claim
       ]
     }
   }
@@ -52,7 +52,7 @@ resource "aws_iam_role_policy_attachment" "github" {
 #
 
 resource "aws_iam_policy" "integration" {
-  name        = "${var.topology.resource.integration_account_role_name}-policy"
+  name        = "${var.topology.oidc.integration_role_name}-policy"
   description = "used by ${var.topology.git.origin} github actions"
   policy      = data.aws_iam_policy_document.integration.json
 }

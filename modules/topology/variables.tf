@@ -46,3 +46,9 @@ variable "integration_account_ecr_paths" {
     description = "image paths for integration account ECR repositories"
     type = set(string)
 }
+
+variable "enable_boundary_policy" {
+    description = "enable boundary policy"
+    type = bool
+    default = false
+}

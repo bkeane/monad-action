@@ -12,6 +12,9 @@ inputs:
   role_arn:
     description: 'The ARN of the AWS role to use'
     required: true
+  boundary_policy:
+    description: 'The policy ARN or name for monad to use'
+    required: false
   registry_id:
     description: 'The ID of the ECR registry to use'
     required: true
@@ -99,3 +102,6 @@ runs:
           core.exportVariable('MONAD_REGISTRY_REGION', '${{ inputs.registry_region }}');
           core.exportVariable('MONAD_BRANCH', '${{ github.head_ref || github.ref_name }}');
           core.exportVariable('MONAD_SHA', '${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}');
+          if ('${{ inputs.boundary_policy }}' != '') {
+            core.exportVariable('MONAD_BOUNDARY_POLICY', '${{ inputs.boundary_policy }}');
+          }
