@@ -52,3 +52,10 @@ variable "enable_boundary_policy" {
     type = bool
     default = false
 }
+
+variable "action_branch" {
+    description = "branch for action"
+    type = string
+    default = "main"
+}
+

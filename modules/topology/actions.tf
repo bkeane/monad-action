@@ -10,7 +10,7 @@ locals {
       steps = [
         {
           name = "setup"
-          uses = "bkeane/monad-action@main"
+          uses = "bkeane/monad-action@${var.action_branch}"
           with = {
             version         = var.monad_version
             role_arn        = local.oidc.integration_role_arn
@@ -32,16 +32,6 @@ locals {
       account = {
         required = true
         type     = "string"
-      }
-      boundary_enable = {
-        required = false
-        type     = "boolean"
-        default = local.resource.enable_boundary_policy
-      }
-      boundary_name = {
-        required = false
-        type     = "string"
-        default = local.resource.boundary_policy_name
       }
     }
 
@@ -78,7 +68,7 @@ locals {
         },
         {
           name = "setup"
-          uses = "bkeane/monad-action@main"
+          uses = "bkeane/monad-action@${var.action_branch}"
           with = merge({
             version         = var.monad_version
             role_arn        = "$${{ steps.validation.outputs.role_arn }}"

@@ -5,10 +5,6 @@ inputs:
     description: 'https://github.com/bkeane/monad/releases'
     required: true
     default: latest
-  checkout:
-    description: 'Checkout the repository'
-    required: false
-    default: true
   role_arn:
     description: 'The ARN of the AWS role to use'
     required: true
@@ -42,20 +38,6 @@ runs:
       uses: aws-actions/amazon-ecr-login@v2
       with:
         registries: ${{ inputs.registry_id }}
-    
-    - name: Setup Docker
-      if: ${{ inputs.setup_docker == 'true' }}
-      id: setup-docker
-      uses: docker/setup-docker-action@v4
-      with:
-        version: latest
-        daemon-config: |
-          {
-            "debug": true,
-            "features": {
-              "containerd-snapshotter": true
-            }
-          }
 
     - name: Setup Buildx
       if: ${{ inputs.setup_docker == 'true' }}
@@ -63,11 +45,7 @@ runs:
       uses: docker/setup-buildx-action@v3
       with:
         version: latest
-
-    - name: Setup QEMU
-      if: ${{ inputs.setup_docker == 'true' }}
-      id: setup-qemu
-      uses: docker/setup-qemu-action@v3
+        platforms: linux/amd64,linux/arm64
 
     - name: Setup Cache
       if: inputs.version != 'latest'
