@@ -16,8 +16,6 @@ locals {
             role_arn        = local.oidc.integration_role_arn
             registry_id     = var.integration_account_id
             registry_region = var.integration_account_ecr_region
-            setup_docker    = true
-            checkout        = true
           }
         }
       ]
@@ -74,8 +72,6 @@ locals {
             role_arn        = "$${{ steps.validation.outputs.role_arn }}"
             registry_id     = var.integration_account_id
             registry_region = var.integration_account_ecr_region
-            setup_docker    = false
-            checkout        = true
           }, var.enable_boundary_policy ? { boundary_policy = local.resource.boundary_policy_name } : {})
         }
       ]
