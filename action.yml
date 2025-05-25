@@ -19,8 +19,6 @@ inputs:
       Name of the IAM permissions boundary monad will apply to managed roles.
     required: false
 
-outputs:
-
 runs:
   using: node20
   main: dist/index.js
