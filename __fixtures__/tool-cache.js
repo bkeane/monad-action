@@ -16,4 +16,4 @@ export const resetMocks = () => {
   extractTar.mockReset()
   extractZip.mockReset()
   cacheFile.mockReset()
-} 
+}

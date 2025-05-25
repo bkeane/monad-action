@@ -24,7 +24,7 @@ describe('main.js', () => {
     // Reset environment variables
     delete process.env.RUNNER_TOOL_CACHE
     delete process.env.RUNNER_TEMP
-    
+
     // Set default mock implementations
     core.getInput.mockImplementation((name) => {
       switch (name) {
@@ -50,19 +50,31 @@ describe('main.js', () => {
     it('Sets default tool cache and temp directories if not defined', async () => {
       // Ensure tool is not cached so env setup runs
       tc.find.mockReturnValueOnce(null)
-      
+
       await run()
-      
-      expect(core.exportVariable).toHaveBeenCalledWith('RUNNER_TOOL_CACHE', '/tmp/runner-tool-cache')
-      expect(core.exportVariable).toHaveBeenCalledWith('RUNNER_TEMP', '/tmp/runner-temp')
+
+      expect(core.exportVariable).toHaveBeenCalledWith(
+        'RUNNER_TOOL_CACHE',
+        '/tmp/runner-tool-cache'
+      )
+      expect(core.exportVariable).toHaveBeenCalledWith(
+        'RUNNER_TEMP',
+        '/tmp/runner-temp'
+      )
     })
 
     it('Preserves existing tool cache and temp directories', async () => {
       process.env.RUNNER_TOOL_CACHE = '/custom/cache'
       process.env.RUNNER_TEMP = '/custom/temp'
       await run()
-      expect(core.exportVariable).not.toHaveBeenCalledWith('RUNNER_TOOL_CACHE', expect.any(String))
-      expect(core.exportVariable).not.toHaveBeenCalledWith('RUNNER_TEMP', expect.any(String))
+      expect(core.exportVariable).not.toHaveBeenCalledWith(
+        'RUNNER_TOOL_CACHE',
+        expect.any(String)
+      )
+      expect(core.exportVariable).not.toHaveBeenCalledWith(
+        'RUNNER_TEMP',
+        expect.any(String)
+      )
     })
   })
 
@@ -125,7 +137,9 @@ describe('main.js', () => {
     it('Fails on unsupported platform', async () => {
       Object.defineProperty(process, 'platform', { value: 'unsupported' })
       await run()
-      expect(core.setFailed).toHaveBeenCalledWith('Unsupported platform: Unsupported')
+      expect(core.setFailed).toHaveBeenCalledWith(
+        'Unsupported platform: Unsupported'
+      )
     })
   })
 
@@ -150,7 +164,10 @@ describe('main.js', () => {
       console.log('IAM config calls:', calls)
       expect(calls).toEqual(
         expect.arrayContaining([
-          ['MONAD_IAM_PERMISSIONS_BOUNDARY', 'arn:aws:iam::123456789012:policy/boundary']
+          [
+            'MONAD_IAM_PERMISSIONS_BOUNDARY',
+            'arn:aws:iam::123456789012:policy/boundary'
+          ]
         ])
       )
     })
@@ -172,7 +189,7 @@ describe('main.js', () => {
         ])
       )
       // Should NOT contain ECR or IAM variables
-      calls.forEach(call => {
+      calls.forEach((call) => {
         expect([
           'MONAD_ECR_REGISTRY_ID',
           'MONAD_ECR_REGISTRY_REGION',

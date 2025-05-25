@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import * as tc from '@actions/tool-cache';
+import * as tc from '@actions/tool-cache'
 import * as path from 'path'
 
 /**
@@ -27,7 +27,8 @@ export async function run() {
       core.addPath(cachedPath)
     } else {
       const platform = process.platform
-      const titleCasedPlatform = platform.charAt(0).toUpperCase() + platform.slice(1)
+      const titleCasedPlatform =
+        platform.charAt(0).toUpperCase() + platform.slice(1)
       const arch = process.arch
       var url
       let extractedPath
@@ -51,12 +52,7 @@ export async function run() {
       const executablePath = path.join(extractedPath, 'monad')
 
       // Cache the tool
-      cachedPath = await tc.cacheFile(
-        executablePath,
-        'monad',
-        'monad',
-        version
-      )
+      cachedPath = await tc.cacheFile(executablePath, 'monad', 'monad', version)
     }
 
     // Add the cached tool to the PATH
@@ -78,10 +74,14 @@ export async function run() {
     }
 
     if (iamPermissionsBoundary) {
-      core.info(`Monad will apply ${iamPermissionsBoundary} IAM permissions boundary to managed roles`)
-      core.exportVariable('MONAD_IAM_PERMISSIONS_BOUNDARY', iamPermissionsBoundary)
+      core.info(
+        `Monad will apply ${iamPermissionsBoundary} IAM permissions boundary to managed roles`
+      )
+      core.exportVariable(
+        'MONAD_IAM_PERMISSIONS_BOUNDARY',
+        iamPermissionsBoundary
+      )
     }
-
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)

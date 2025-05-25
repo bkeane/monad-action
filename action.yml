@@ -1,6 +1,6 @@
 name: monad-action
 description: an action to install and configure monad.
-author: Brendan Keane 
+author: Brendan Keane
 
 # Define your inputs here.
 inputs:
@@ -15,7 +15,8 @@ inputs:
     description: Configure the ECR registry region monad will use.
     required: false
   iam_permissions_boundary:
-    description: Name of the IAM permissions boundary monad will apply to managed roles.
+    description:
+      Name of the IAM permissions boundary monad will apply to managed roles.
     required: false
 
 runs:

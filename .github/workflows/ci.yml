@@ -57,7 +57,10 @@ jobs:
         id: test-action
         uses: ./
         with:
-          milliseconds: 1000
+          version: v0.1.4
+          ecr_registry_id: 123456789012
+          ecr_registry_region: us-west-2
+          iam_permissions_boundary: arn:aws:iam::123456789012:policy/boundary
 
       - name: Print Output
         id: output
