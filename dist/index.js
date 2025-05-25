@@ -29842,24 +29842,26 @@ async function run() {
       coreExports.addPath(cachedPath);
     } else {
       const platform = process.platform;
-      const titleCasedPlatform =
+      const releasePlatform =
         platform.charAt(0).toUpperCase() + platform.slice(1);
-      const arch = process.arch;
+      const releaseArch = process.arch == 'x64' ? 'x86_64' : process.arch;
       var url;
       let extractedPath;
 
-      if (titleCasedPlatform === 'Darwin' || titleCasedPlatform === 'Linux') {
-        url = `https://github.com/bkeane/monad/releases/download/${version}/monad_${titleCasedPlatform}_${arch}.tar.gz`;
+      if (releasePlatform === 'Darwin' || releasePlatform === 'Linux') {
+        url = `https://github.com/bkeane/monad/releases/download/${version}/monad_${releasePlatform}_${releaseArch}.tar.gz`;
         coreExports.info(`Downloading monad from ${url}...`);
         const downloadPath = await toolCacheExports.downloadTool(url);
         extractedPath = await toolCacheExports.extractTar(downloadPath);
-      } else if (titleCasedPlatform === 'Win32') {
-        url = `https://github.com/bkeane/monad/releases/download/${version}/monad_${titleCasedPlatform}_${arch}.zip`;
+      } else if (releasePlatform === 'Win32') {
+        url = `https://github.com/bkeane/monad/releases/download/${version}/monad_${releasePlatform}_${releaseArch}.zip`;
         coreExports.info(`Downloading monad from ${url}...`);
         const downloadPath = await toolCacheExports.downloadTool(url);
         extractedPath = await toolCacheExports.extractZip(downloadPath);
       } else {
-        coreExports.setFailed(`Unsupported platform: ${titleCasedPlatform}`);
+        coreExports.setFailed(
+          `Unsupported release: monad_${releasePlatform}_${releaseArch}.tar.gz`
+        );
         return
       }
 

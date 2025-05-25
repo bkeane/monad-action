@@ -116,7 +116,7 @@ describe('main.js', () => {
       await run()
 
       expect(tc.downloadTool).toHaveBeenCalledWith(
-        expect.stringContaining('monad_Darwin_x64.tar.gz')
+        expect.stringContaining('monad_Darwin_x86_64.tar.gz')
       )
       expect(tc.extractTar).toHaveBeenCalled()
     })
@@ -129,7 +129,7 @@ describe('main.js', () => {
       await run()
 
       expect(tc.downloadTool).toHaveBeenCalledWith(
-        expect.stringContaining('monad_Win32_x64.zip')
+        expect.stringContaining('monad_Win32_x86_64.zip')
       )
       expect(tc.extractZip).toHaveBeenCalled()
     })
@@ -138,7 +138,7 @@ describe('main.js', () => {
       Object.defineProperty(process, 'platform', { value: 'unsupported' })
       await run()
       expect(core.setFailed).toHaveBeenCalledWith(
-        'Unsupported platform: Unsupported'
+        'Unsupported release: monad_Unsupported_x86_64.tar.gz'
       )
     })
   })
