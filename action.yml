@@ -1,23 +1,22 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
-
-# Add your action's branding here. This will appear on the GitHub Marketplace.
-branding:
-  icon: heart
-  color: red
+name: monad-action
+description: an action to install and configure monad.
+author: Brendan Keane 
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
+  version:
+    description: monad version to install
     required: true
-    default: '1000'
-
-# Define your outputs here.
-outputs:
-  time:
-    description: Your output description here
+    default: 'v0.1.4'
+  ecr_registry_id:
+    description: Configure the ECR registry ID monad will use.
+    required: false
+  ecr_registry_region:
+    description: Configure the ECR registry region monad will use.
+    required: false
+  iam_permissions_boundary:
+    description: Name of the IAM permissions boundary monad will apply to managed roles.
+    required: false
 
 runs:
   using: node20
