@@ -1,6 +1,6 @@
 # Monad-Action
 
-A GitHub Action for installing and configuring monad.
+A GitHub Action for installing and configuring [Monad](https://bkeane.github.io/monad/).
 
 ## Description
 
@@ -20,10 +20,12 @@ options for version and AWS-related configurations.
 ## Usage
 
 ```yaml
-- uses: your-username/monad-action@v1
+- uses: bkeane/monad-action@v1
   with:
-    version: 'v0.1.4' # Optional, defaults to v0.1.4
-    ecr_registry_id: '123456789012' # Optional
-    ecr_registry_region: 'us-west-2' # Optional
+    version: 'v0.1.4' # Optional, defaults to latest major version.
+    ecr_registry_id: '123456789012' # Optional, defaults to caller account
+    ecr_registry_region: 'us-west-2' # Optional, defaults to caller region
     iam_permissions_boundary: 'MyPermissionsBoundary' # Optional
 ```
+
+See [releases](https://github.com/bkeane/monad/releases) for alternate `version:` inputs.
