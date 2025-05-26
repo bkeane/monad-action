@@ -151,8 +151,8 @@ describe('main.js', () => {
       console.log('ECR config calls:', calls)
       expect(calls).toEqual(
         expect.arrayContaining([
-          ['MONAD_ECR_REGISTRY_ID', '123456789'],
-          ['MONAD_ECR_REGISTRY_REGION', 'us-west-2']
+          ['MONAD_REGISTRY_ID', '123456789'],
+          ['MONAD_REGISTRY_REGION', 'us-west-2']
         ])
       )
     })
@@ -164,10 +164,7 @@ describe('main.js', () => {
       console.log('IAM config calls:', calls)
       expect(calls).toEqual(
         expect.arrayContaining([
-          [
-            'MONAD_IAM_PERMISSIONS_BOUNDARY',
-            'arn:aws:iam::123456789012:policy/boundary'
-          ]
+          ['MONAD_BOUNDARY_POLICY', 'arn:aws:iam::123456789012:policy/boundary']
         ])
       )
     })
@@ -191,9 +188,9 @@ describe('main.js', () => {
       // Should NOT contain ECR or IAM variables
       calls.forEach((call) => {
         expect([
-          'MONAD_ECR_REGISTRY_ID',
-          'MONAD_ECR_REGISTRY_REGION',
-          'MONAD_IAM_PERMISSIONS_BOUNDARY'
+          'MONAD_REGISTRY_ID',
+          'MONAD_REGISTRY_REGION',
+          'MONAD_BOUNDARY_POLICY'
         ]).not.toContain(call[0])
       })
     })

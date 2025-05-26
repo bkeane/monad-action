@@ -29839,7 +29839,6 @@ async function run() {
     let cachedPath = toolCacheExports.find('monad', version);
     if (cachedPath) {
       coreExports.info(`Found cached monad version ${version}`);
-      coreExports.addPath(cachedPath);
     } else {
       const platform = process.platform;
       const releasePlatform =
@@ -29882,22 +29881,19 @@ async function run() {
 
     if (ecrRegistryId) {
       coreExports.info(`Pointing monad to ECR registry ID: ${ecrRegistryId}`);
-      coreExports.exportVariable('MONAD_ECR_REGISTRY_ID', ecrRegistryId);
+      coreExports.exportVariable('MONAD_REGISTRY_ID', ecrRegistryId);
     }
 
     if (ecrRegistryRegion) {
       coreExports.info(`Pointing monad to ECR registry region: ${ecrRegistryRegion}`);
-      coreExports.exportVariable('MONAD_ECR_REGISTRY_REGION', ecrRegistryRegion);
+      coreExports.exportVariable('MONAD_REGISTRY_REGION', ecrRegistryRegion);
     }
 
     if (iamPermissionsBoundary) {
       coreExports.info(
         `Monad will apply ${iamPermissionsBoundary} IAM permissions boundary to managed roles`
       );
-      coreExports.exportVariable(
-        'MONAD_IAM_PERMISSIONS_BOUNDARY',
-        iamPermissionsBoundary
-      );
+      coreExports.exportVariable('MONAD_BOUNDARY_POLICY', iamPermissionsBoundary);
     }
   } catch (error) {
     // Fail the workflow run if an error occurs

@@ -24,7 +24,6 @@ export async function run() {
     let cachedPath = tc.find('monad', version)
     if (cachedPath) {
       core.info(`Found cached monad version ${version}`)
-      core.addPath(cachedPath)
     } else {
       const platform = process.platform
       const releasePlatform =
@@ -67,22 +66,19 @@ export async function run() {
 
     if (ecrRegistryId) {
       core.info(`Pointing monad to ECR registry ID: ${ecrRegistryId}`)
-      core.exportVariable('MONAD_ECR_REGISTRY_ID', ecrRegistryId)
+      core.exportVariable('MONAD_REGISTRY_ID', ecrRegistryId)
     }
 
     if (ecrRegistryRegion) {
       core.info(`Pointing monad to ECR registry region: ${ecrRegistryRegion}`)
-      core.exportVariable('MONAD_ECR_REGISTRY_REGION', ecrRegistryRegion)
+      core.exportVariable('MONAD_REGISTRY_REGION', ecrRegistryRegion)
     }
 
     if (iamPermissionsBoundary) {
       core.info(
         `Monad will apply ${iamPermissionsBoundary} IAM permissions boundary to managed roles`
       )
-      core.exportVariable(
-        'MONAD_IAM_PERMISSIONS_BOUNDARY',
-        iamPermissionsBoundary
-      )
+      core.exportVariable('MONAD_BOUNDARY_POLICY', iamPermissionsBoundary)
     }
   } catch (error) {
     // Fail the workflow run if an error occurs
