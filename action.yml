@@ -7,7 +7,7 @@ inputs:
   version:
     description: monad version to install
     required: true
-    default: 'v0.1.4'
+    default: 'v0.1.5'
   ecr_registry_id:
     description: Configure the ECR registry ID monad will use.
     required: false
