@@ -1,6 +1,7 @@
 # Monad-Action
 
-A GitHub Action for installing and configuring [Monad](https://bkeane.github.io/monad/).
+A GitHub Action for installing and configuring
+[Monad](https://bkeane.github.io/monad/).
 
 ## Description
 
@@ -28,4 +29,5 @@ options for version and AWS-related configurations.
     iam_permissions_boundary: 'MyPermissionsBoundary' # Optional
 ```
 
-See [releases](https://github.com/bkeane/monad/releases) for alternate `version:` inputs.
+See [releases](https://github.com/bkeane/monad/releases) for alternate
+`version:` inputs.
