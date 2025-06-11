@@ -27,7 +27,16 @@ options for version and AWS-related configurations.
     ecr_registry_id: '123456789012' # Optional, defaults to caller account
     ecr_registry_region: 'us-west-2' # Optional, defaults to caller region
     iam_permissions_boundary: 'MyPermissionsBoundary' # Optional
+
+- shell: bash
+  run: |
+    monad -h
 ```
 
-See [releases](https://github.com/bkeane/monad/releases) for alternate
-`version:` inputs.
+## References
+- [monad releases](https://github.com/bkeane/monad/releases)
+- [iam assume role action](https://github.com/aws-actions/configure-aws-credentials)
+- [ecr login action](https://github.com/aws-actions/amazon-ecr-login)
+- [multi-account / multi-role management](https://github.com/bkeane/stage)
+
+
