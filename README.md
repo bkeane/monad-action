@@ -34,9 +34,8 @@ options for version and AWS-related configurations.
 ```
 
 ## References
+
 - [monad releases](https://github.com/bkeane/monad/releases)
 - [iam assume role action](https://github.com/aws-actions/configure-aws-credentials)
 - [ecr login action](https://github.com/aws-actions/amazon-ecr-login)
 - [multi-account / multi-role management](https://github.com/bkeane/stage)
-
-
